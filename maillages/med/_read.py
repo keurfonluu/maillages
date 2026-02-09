@@ -81,15 +81,16 @@ def read(filename: str | os.PathLike) -> Mesh:
                 field = cast(h5py.Group, v)
 
                 # Get variable names
+                prefix = k[8:]
                 names = cast(bytes, field.attrs["NOM"])
                 nco = cast(int, field.attrs["NCO"])
 
                 if names is None:
-                    prefix = k[8:]
                     names = [f"{prefix}[{i + 1}]" for i in range(nco)]
 
                 else:
                     names = names.decode().strip().split()
+                    names = [f"{prefix}_{name}" for name in names]
 
                 # Get all time steps
                 if time_steps is None:
@@ -134,7 +135,7 @@ def read(filename: str | os.PathLike) -> Mesh:
             if k != "NOE" and kk not in cell_data_names:
                 cell_data_names.append(kk)
 
-            celltype_data[k][kk] = vv[0] if len(vv) == 1 else np.transpose(vv)
+            celltype_data[k][kk] = np.atleast_1d(vv[0]) if len(vv) == 1 else np.transpose(vv)
 
     point_data = celltype_data.pop("NOE")
 
@@ -188,7 +189,7 @@ def get_array(
 
     arr = np.asanyarray(node)
 
-    return arr if arr.size == n else arr.reshape(n, -1, order=order).squeeze()
+    return arr if arr.size == n else arr.reshape(n, -1, order=order)
 
 
 _maillages_to_med_celltype = {
