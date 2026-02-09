@@ -49,6 +49,11 @@ def read(filename: str | os.PathLike) -> Mesh:
         # Read points
         noeuds = cast(h5py.Group, submesh["NOE"])
         points = get_array(noeuds["COO"], "NBR")
+        family_id_node = (
+            get_array(noeuds["FAM"], "NBR")
+            if "FAM" in noeuds
+            else None
+        )
 
         # Read cells
         mailles = cast(h5py.Group, submesh["MAI"])
@@ -69,6 +74,19 @@ def read(filename: str | os.PathLike) -> Mesh:
 
             if "NUM" in v:
                 num_id_cell.append(get_array(v["NUM"], "NBR"))
+
+        # Read families
+        if "FAS" in f:
+            fas = cast(h5py.Group, f["FAS"])
+            fas = cast(h5py.Group, fas[mesh_names[0]])
+
+            if "NOEUD" in fas:
+                fas_noeu = cast(h5py.Group, fas["NOEUD"])
+                metadata["med:FamilyIdNodeGroup"] = get_families(fas_noeu)
+
+            if "ELEME" in fas:
+                fas_eleme = cast(h5py.Group, fas["ELEME"])
+                metadata["med:FamilyIdCellGroup"] = get_families(fas_eleme)
 
         # Read fields
         cha = f.get("CHA")
@@ -160,6 +178,9 @@ def read(filename: str | os.PathLike) -> Mesh:
         for name in cell_data_names
     }
 
+    if family_id_node is not None:
+        point_data["FamilyIdNode"] = family_id_node
+
     if family_id_cell:
         cell_data["FamilyIdCell"] = np.concatenate(family_id_cell)
 
@@ -190,6 +211,21 @@ def get_array(
     arr = np.asanyarray(node)
 
     return arr if arr.size == n else arr.reshape(n, -1, order=order)
+
+
+def get_families(fas: h5py.Group) -> dict:
+    families = {
+        node_set.attrs["NUM"]: [
+            "".join(map(chr, dataset)).strip().rstrip("\x00")
+            for dataset in node_set["GRO"]["NOM"][:]
+        ]
+        for node_set in fas.values()
+    }
+
+    return {
+        tuple(v) if len(v) > 1 else v[0]: int(k)
+        for k, v in families.items()
+    }
 
 
 _maillages_to_med_celltype = {
