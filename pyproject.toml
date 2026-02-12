@@ -1,0 +1,120 @@
+[build-system]
+requires = ["setuptools >= 77.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "maillages"
+dynamic = ["version"]
+description = "Mesh I/O for Python"
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.9"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [
+    {name = "Keurfon Luu", email = "keurfonluu@outlook.com"}
+]
+keywords = [
+    "mesh",
+    "io",
+    "fem",
+    "finite elements",
+]
+classifiers = [
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Natural Language :: English",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "numpy >= 1.13.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/keurfonluu/maillages"
+Code = "https://github.com/keurfonluu/maillages"
+Issues = "https://github.com/keurfonluu/maillages/issues"
+
+[tool.setuptools.packages.find]
+include = ["maillages*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "maillages.__about__.__version__"}
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+exclude = [
+    "maillages/__about__.py"
+]
+
+[tool.ruff.lint]
+select = [
+    # docformatter, see <https://github.com/astral-sh/ruff/issues/1335>
+    "D104",
+    "D106",
+    "D200",
+    "D204",
+    "D206",
+    "D207",
+    "D208",
+    "D209",
+    "D210",
+    "D211",
+    "D213",
+    "D214",
+    "D215",
+    "D300",
+    "D301",
+    "D400",
+    "D403",
+    "D404",
+    "D405",
+    "D406",
+    "D407",
+    "D408",
+    "D409",
+    "D410",
+    "D411",
+    "D412",
+    "D413",
+    "D414",
+    "D415",
+    "D418",
+    "D419",
+    # isort
+    "I",
+]
+
+[tool.ruff.lint.isort]
+force-wrap-aliases = true
+combine-as-imports = true
+from-first = false
+lines-after-imports = 2
+relative-imports-order = "closest-to-furthest"
+
+[tool.coverage.report]
+exclude_also = [
+    "def __repr__",
+    "except ModuleNotFoundError",
+    "raise ModuleNotFoundError",
+    "raise NotImplementedError",
+    "raise TypeError",
+    "raise ValueError",
+    "except RuntimeError",
+    "raise RuntimeError",
+    "except np.linalg.LinAlgError",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.run]
+omit = [
+    "**/_typing.py",
+]
