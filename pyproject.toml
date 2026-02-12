@@ -34,6 +34,12 @@ classifiers = [
 ]
 dependencies = [
     "numpy >= 1.13.0",
+    "pyrequire >= 0.2.0",
+]
+
+[project.optional-dependencies]
+full = [
+    "h5py",
 ]
 
 [project.urls]
