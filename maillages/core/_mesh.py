@@ -14,6 +14,33 @@ if TYPE_CHECKING:
 
 
 class Mesh:
+    """
+    Core mesh class.
+
+    Parameters
+    ----------
+    *args : tuple[ArrayLike, dict]]
+        Positional arguments. Either of the following:
+
+        - points, cell_dict: where points is an (N, 2) or (N, 3) array of point
+        coordinates and cell_dict is a dictionary mapping cell types to arrays of cell
+        connectivity. Cell types can be specified as either strings or integers.
+
+    point_data : dict, optional
+        Dictionary containing point data arrays.
+    cell_data : dict, optional
+        Dictionary containing cell data arrays.
+    point_sets : dict, optional
+        Dictionary containing point sets.
+    cell_sets : dict, optional
+        Dictionary containing cell sets.
+    time_steps : ArrayLike, optional
+        Array of time steps for time-dependent data. If provided, point and cell data
+        arrays must have a last dimension matching the length of time_steps.
+    metadata : dict, optional
+        Dictionary containing metadata information.
+    
+    """
     def __init__(
         self,
         *args,
@@ -24,6 +51,7 @@ class Mesh:
         time_steps: Optional[ArrayLike] = None,
         metadata: Optional[dict] = None,
     ) -> None:
+        """Initialize a mesh object."""
         from .. import CellType
 
         # Parse input arguments
@@ -41,7 +69,7 @@ class Mesh:
                 celltypes += [int(celltype)] * len(v)
 
         else:
-            raise NotImplementedError()
+            raise ValueError("invalid number of positional arguments")
         
         # Points
         points = np.asanyarray(points)
@@ -84,50 +112,70 @@ class Mesh:
 
     @require_package("pyvista")
     def to_pyvista(self) -> pv.UnstructuredGrid:
+        """
+        Convert the mesh to a PyVista grid.
+
+        Returns
+        -------
+        pyvista.UnstructuredGrid
+            Output PyVista grid.
+        
+        """
         from ..utils import to_pyvista
 
         return to_pyvista(self)
 
     @property
     def cell_data(self) -> dict:
+        """Get the cell data dictionary."""
         return self._cell_data
     
     @property
     def cell_sets(self) -> dict:
+        """Get the cell sets dictionary."""
         return self._cell_sets
 
     @property
     def cells(self) -> list[NDArray]:
+        """Get the list of cell connectivity arrays."""
         return self._cells
     
     @property
     def celltypes(self) -> NDArray:
+        """Get the array of cell types."""
         return self._celltypes
     
     @property
     def metadata(self) -> dict:
+        """Get the metadata dictionary."""
         return self._metadata
     
     @property
     def n_cells(self) -> int:
+        """Get the total number of cells in the mesh."""
         return len(self.cells)
     
     @property
     def n_points(self) -> int:
+        """Get the total number of points in the mesh."""
         return len(self.points)
     
     @property
     def points(self) -> NDArray:
+        """Get the array of points."""
         return self._points
     
     @property
     def point_data(self) -> dict:
+        """Get the point data dictionary."""
         return self._point_data
     
     @property
     def point_sets(self) -> dict:
+        """Get the point sets dictionary."""
         return self._point_sets
     
     @property
     def time_steps(self) -> NDArray | None:
+        """Get the array of time steps."""
         return self._time_steps

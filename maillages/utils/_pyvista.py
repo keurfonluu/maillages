@@ -13,6 +13,20 @@ if TYPE_CHECKING:
 
 @require_package("pyvista")
 def to_pyvista(mesh: Mesh) -> pv.UnstructuredGrid:
+    """
+    Convert a mesh to a PyVista grid.
+
+    Parameters
+    ----------
+    mesh : maillages.Mesh
+        Input mesh.
+
+    Returns
+    -------
+    pyvista.UnstructuredGrid
+        Output PyVista grid.
+    
+    """
     import pyvista as pv
 
     cells = []

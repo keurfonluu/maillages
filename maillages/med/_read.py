@@ -18,6 +18,20 @@ if TYPE_CHECKING:
 
 
 def read(filename: str | os.PathLike) -> Mesh:
+    """
+    Read a MED file.
+
+    Parameters
+    ----------
+    filename : str | PathLike
+        Input file name.
+
+    Returns
+    -------
+    maillages.Mesh
+        Output mesh.
+    
+    """
     from .. import Mesh
 
     metadata = {}
@@ -202,6 +216,7 @@ def get_array(
     n: int | str,
     order: Literal["C", "F"] = "F",
 ) -> NDArray:
+    """Get a NumPy array from an HDF5 node."""
     if isinstance(n, str):
         if node.attrs[n] is None:
             raise ValueError(f"could not find attribute {n} in node {node.name}")
@@ -214,6 +229,7 @@ def get_array(
 
 
 def get_families(fas: h5py.Group) -> dict:
+    """Get the family ID to name mapping from a FAS group."""
     families = {
         node_set.attrs["NUM"]: [
             "".join(map(chr, dataset)).strip().rstrip("\x00")
