@@ -11,7 +11,7 @@ from ..core import CellType
 if TYPE_CHECKING:
     import os
     from typing import Literal
-    
+
     from numpy.typing import NDArray
 
     from .. import Mesh
@@ -30,7 +30,7 @@ def read(filename: str | os.PathLike) -> Mesh:
     -------
     maillages.Mesh
         Output mesh.
-    
+
     """
     from .. import Mesh
 
@@ -42,7 +42,7 @@ def read(filename: str | os.PathLike) -> Mesh:
 
         if enumerate is None:
             raise ValueError("could not find mesh in file")
-        
+
         ens_maa = cast(h5py.Group, ens_maa)
         mesh_names = list(ens_maa)
         mesh = cast(h5py.Group, ens_maa[mesh_names[0]])
@@ -63,11 +63,7 @@ def read(filename: str | os.PathLike) -> Mesh:
         # Read points
         noeuds = cast(h5py.Group, submesh["NOE"])
         points = get_array(noeuds["COO"], "NBR")
-        family_id_node = (
-            get_array(noeuds["FAM"], "NBR")
-            if "FAM" in noeuds
-            else None
-        )
+        family_id_node = get_array(noeuds["FAM"], "NBR") if "FAM" in noeuds else None
 
         # Read cells
         mailles = cast(h5py.Group, submesh["MAI"])
@@ -167,7 +163,9 @@ def read(filename: str | os.PathLike) -> Mesh:
             if k != "NOE" and kk not in cell_data_names:
                 cell_data_names.append(kk)
 
-            celltype_data[k][kk] = np.atleast_1d(vv[0]) if len(vv) == 1 else np.transpose(vv)
+            celltype_data[k][kk] = (
+                np.atleast_1d(vv[0]) if len(vv) == 1 else np.transpose(vv)
+            )
 
     point_data = celltype_data.pop("NOE")
 
@@ -178,15 +176,14 @@ def read(filename: str | os.PathLike) -> Mesh:
         for name in cell_data_names:
             if name not in v:
                 celltype = _med_to_maillages_celltype[k]
-                celltype_data[k][name] = np.full((len(cells[celltype]), n_time_steps), np.nan).squeeze()
+                celltype_data[k][name] = np.full(
+                    (len(cells[celltype]), n_time_steps), np.nan
+                ).squeeze()
 
     # Convert cell data dict per cell type to a single dict with all cell types
     cell_data = {
         name: np.concatenate(
-            [
-                celltype_data[k][name] for k in celltype_data
-                if name in celltype_data[k]
-            ],
+            [celltype_data[k][name] for k in celltype_data if name in celltype_data[k]],
             axis=0,
         )
         for name in cell_data_names
@@ -238,10 +235,7 @@ def get_families(fas: h5py.Group) -> dict:
         for node_set in fas.values()
     }
 
-    return {
-        tuple(v) if len(v) > 1 else v[0]: int(k)
-        for k, v in families.items()
-    }
+    return {tuple(v) if len(v) > 1 else v[0]: int(k) for k, v in families.items()}
 
 
 _maillages_to_med_celltype = {

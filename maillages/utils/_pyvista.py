@@ -6,9 +6,9 @@ from pyrequire import require_package
 
 
 if TYPE_CHECKING:
-    from .. import Mesh
-
     import pyvista as pv
+
+    from .. import Mesh
 
 
 @require_package("pyvista")
@@ -25,7 +25,7 @@ def to_pyvista(mesh: Mesh) -> pv.UnstructuredGrid:
     -------
     pyvista.UnstructuredGrid
         Output PyVista grid.
-    
+
     """
     import pyvista as pv
 
@@ -38,7 +38,7 @@ def to_pyvista(mesh: Mesh) -> pv.UnstructuredGrid:
         mesh.celltypes,
         mesh.points,
     )
-    
+
     for k, v in mesh.point_data.items():
         ugrid.point_data[k] = v
 

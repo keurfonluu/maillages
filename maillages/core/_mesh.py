@@ -39,8 +39,9 @@ class Mesh:
         arrays must have a last dimension matching the length of time_steps.
     metadata : dict, optional
         Dictionary containing metadata information.
-    
+
     """
+
     def __init__(
         self,
         *args,
@@ -62,7 +63,7 @@ class Mesh:
                 raise ValueError("could not parse cells without cell types")
 
             cells, celltypes = [], []
-            
+
             for k, v in cell_dict.items():
                 cells += list(np.atleast_2d(v))
                 celltype = CellType[k] if isinstance(k, str) else k
@@ -70,7 +71,7 @@ class Mesh:
 
         else:
             raise ValueError("invalid number of positional arguments")
-        
+
         # Points
         points = np.asanyarray(points)
 
@@ -94,12 +95,16 @@ class Mesh:
 
             for k, v in point_data.items():
                 if v.ndim > 1 and v.shape[-1] != len(time_steps):
-                    raise ValueError(f"could not match number of time steps with point data '{k}'")
-                
+                    raise ValueError(
+                        f"could not match number of time steps with point data '{k}'"
+                    )
+
             for k, v in cell_data.items():
                 if v.ndim > 1 and v.shape[-1] != len(time_steps):
-                    raise ValueError(f"could not match number of time steps with cell data '{k}'")
-        
+                    raise ValueError(
+                        f"could not match number of time steps with cell data '{k}'"
+                    )
+
         self._points = points
         self._cells = cells
         self._celltypes = np.array(celltypes)
@@ -119,7 +124,7 @@ class Mesh:
         -------
         pyvista.UnstructuredGrid
             Output PyVista grid.
-        
+
         """
         from ..utils import to_pyvista
 
@@ -129,7 +134,7 @@ class Mesh:
     def cell_data(self) -> dict:
         """Get the cell data dictionary."""
         return self._cell_data
-    
+
     @property
     def cell_sets(self) -> dict:
         """Get the cell sets dictionary."""
@@ -139,42 +144,42 @@ class Mesh:
     def cells(self) -> list[NDArray]:
         """Get the list of cell connectivity arrays."""
         return self._cells
-    
+
     @property
     def celltypes(self) -> NDArray:
         """Get the array of cell types."""
         return self._celltypes
-    
+
     @property
     def metadata(self) -> dict:
         """Get the metadata dictionary."""
         return self._metadata
-    
+
     @property
     def n_cells(self) -> int:
         """Get the total number of cells in the mesh."""
         return len(self.cells)
-    
+
     @property
     def n_points(self) -> int:
         """Get the total number of points in the mesh."""
         return len(self.points)
-    
+
     @property
     def points(self) -> NDArray:
         """Get the array of points."""
         return self._points
-    
+
     @property
     def point_data(self) -> dict:
         """Get the point data dictionary."""
         return self._point_data
-    
+
     @property
     def point_sets(self) -> dict:
         """Get the point sets dictionary."""
         return self._point_sets
-    
+
     @property
     def time_steps(self) -> NDArray | None:
         """Get the array of time steps."""
