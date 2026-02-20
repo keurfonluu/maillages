@@ -7,7 +7,7 @@ from pyrequire import require_package
 
 
 if TYPE_CHECKING:
-    from typing import Optional
+    from typing import Literal, Optional
 
     import pyvista as pv
     from numpy.typing import ArrayLike, NDArray
@@ -68,6 +68,9 @@ class Mesh:
                 cells += list(np.atleast_2d(v))
                 celltype = CellType[k] if isinstance(k, str) else k
                 celltypes += [int(celltype)] * len(v)
+
+        elif len(args) == 3:
+            points, cells, celltypes = args
 
         else:
             raise ValueError("invalid number of positional arguments")
@@ -130,6 +133,42 @@ class Mesh:
 
         return to_pyvista(self)
 
+    def _get_entity_tags(
+        self, entity: Literal["point", "cell"]
+    ) -> tuple[NDArray | None, dict | None]:
+        """
+        Get the integer tags for the specified entity type.
+
+        Parameters
+        ----------
+        entity : {'point', 'cell'}
+            Entity for which to retrieve tags.
+
+        Returns
+        -------
+        NDArray | None
+            Entity tags.
+        dict | None
+            Mapping of tag values to tag names.
+
+        """
+        data = self.point_data if entity == "point" else self.cell_data
+        integer_data_keys = [k for k, v in data.items() if v.dtype.kind == "i"]
+
+        for key in integer_data_keys:
+            if key in self.metadata:
+                tag_to_id = self.metadata[key]
+                id_to_tag = {v: k for k, v in tag_to_id.items()}
+
+                return np.array(list(map(lambda x: id_to_tag[x], data[key]))), tag_to_id
+
+        if integer_data_keys:
+            tag_to_id = {str(i): i for i in np.unique(data[integer_data_keys[0]])}
+
+            return data[integer_data_keys[0]], tag_to_id
+
+        return None, None
+
     @property
     def cell_data(self) -> dict:
         """Get the cell data dictionary."""
@@ -139,6 +178,11 @@ class Mesh:
     def cell_sets(self) -> dict:
         """Get the cell sets dictionary."""
         return self._cell_sets
+
+    @property
+    def cell_tags(self) -> NDArray | None:
+        """Get the cell tags array."""
+        return self._get_entity_tags("cell")[0]
 
     @property
     def cells(self) -> list[NDArray]:
@@ -179,6 +223,11 @@ class Mesh:
     def point_sets(self) -> dict:
         """Get the point sets dictionary."""
         return self._point_sets
+
+    @property
+    def point_tags(self) -> NDArray | None:
+        """Get the point tags array."""
+        return self._get_entity_tags("point")[0]
 
     @property
     def time_steps(self) -> NDArray | None:
