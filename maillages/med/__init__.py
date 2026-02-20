@@ -1,3 +1,3 @@
 """MED file I/O."""
 
-from ._read import read
+from ._med import read
