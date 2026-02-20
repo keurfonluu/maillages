@@ -40,6 +40,8 @@ dependencies = [
 [project.optional-dependencies]
 full = [
     "h5py",
+    "pyvista >= 0.45",
+    "pyvista-gridder >= 0.5.0",
 ]
 
 [project.urls]
