@@ -133,7 +133,7 @@ class Mesh:
 
         return to_pyvista(self)
     
-    def _get_entity_tags(self, entity: Literal["point", "cell"]) -> NDArray | None:
+    def _get_entity_tags(self, entity: Literal["point", "cell"]) -> tuple[NDArray | None, dict | None]:
         """
         Get the integer tags for the specified entity type.
 
@@ -146,6 +146,8 @@ class Mesh:
         -------
         NDArray | None
             Entity tags.
+        dict | None
+            Mapping of tag values to tag names.
         
         """
         data = self.point_data if entity == "point" else self.cell_data
@@ -153,14 +155,17 @@ class Mesh:
 
         for key in integer_data_keys:
             if key in self.metadata:
-                id_to_tag = {v: k for k, v in self.metadata[key].items()}
+                tag_to_id = self.metadata[key]
+                id_to_tag = {v: k for k, v in tag_to_id.items()}
 
-                return np.array(list(map(lambda x: id_to_tag[x], data[key])))
+                return np.array(list(map(lambda x: id_to_tag[x], data[key]))), tag_to_id
             
         if integer_data_keys:
-            return data[integer_data_keys[0]]
+            tag_to_id = {str(i): i for i in np.unique(data[integer_data_keys[0]])}
+
+            return data[integer_data_keys[0]], tag_to_id
         
-        return None
+        return None, None
 
     @property
     def cell_data(self) -> dict:
@@ -175,7 +180,7 @@ class Mesh:
     @property
     def cell_tags(self) -> NDArray | None:
         """Get the cell tags array."""
-        return self._get_entity_tags("cell")
+        return self._get_entity_tags("cell")[0]
 
     @property
     def cells(self) -> list[NDArray]:
@@ -220,7 +225,7 @@ class Mesh:
     @property
     def point_tags(self) -> NDArray | None:
         """Get the point tags array."""
-        return self._get_entity_tags("point")
+        return self._get_entity_tags("point")[0]
 
     @property
     def time_steps(self) -> NDArray | None:
