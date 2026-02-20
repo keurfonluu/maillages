@@ -92,11 +92,11 @@ def read(filename: str | os.PathLike) -> Mesh:
 
             if "NOEUD" in fas:
                 fas_noeu = cast(h5py.Group, fas["NOEUD"])
-                metadata["med:FamilyIdNodeGroup"] = get_families(fas_noeu)
+                metadata["FamilyIdNode"] = get_families(fas_noeu)
 
             if "ELEME" in fas:
                 fas_eleme = cast(h5py.Group, fas["ELEME"])
-                metadata["med:FamilyIdCellGroup"] = get_families(fas_eleme)
+                metadata["FamilyIdCell"] = get_families(fas_eleme)
 
         # Read fields
         cha = f.get("CHA")
