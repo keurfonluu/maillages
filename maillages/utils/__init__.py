@@ -1,3 +1,3 @@
 """Utility functions."""
 
-from ._pyvista import to_pyvista
+from ._pyvista import from_pyvista, to_pyvista
