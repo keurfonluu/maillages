@@ -30,7 +30,7 @@ def write(
         Input mesh.
     title : str, optional
         Title to add at the top of the file.
-    
+
     """
     with open(filename, "w") as f:
         # Title
@@ -66,7 +66,7 @@ def write(
 
                 f.write(f"{_maillages_to_aster_celltype[celltype_]}\n")
 
-            f.write(f"M{i} {' '.join(map(lambda x: f"N{x}", cell))}\n")
+            f.write(f"M{i} {' '.join(map(lambda x: f'N{x}', cell))}\n")
             celltype = celltype_
 
         f.write("FINSF\n\n")
@@ -74,7 +74,7 @@ def write(
         # Point and cell groups
         write_group(f, mesh, "point")
         write_group(f, mesh, "cell")
-            
+
         f.write("FIN\n")
 
 
@@ -105,8 +105,8 @@ def write_group(f, mesh: Mesh, entity: Literal["point", "cell"], n: int = 8) -> 
 
             f.write(f"{prefix} NOM={k}\n")
             for ids_ in ids:
-                f.write(f"{' '.join(map(lambda x: f"{identifier}{x}", ids_))}\n")
-            
+                f.write(f"{' '.join(map(lambda x: f'{identifier}{x}', ids_))}\n")
+
             f.write("FINSF\n\n")
 
 
