@@ -1,6 +1,6 @@
 """Mesh I/O for Python."""
 
-from . import med
+from . import aster, med
 from .__about__ import __version__
 from .core import *
 from .utils import *
