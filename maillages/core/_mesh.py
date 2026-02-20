@@ -7,7 +7,7 @@ from pyrequire import require_package
 
 
 if TYPE_CHECKING:
-    from typing import Optional
+    from typing import Literal, Optional
 
     import pyvista as pv
     from numpy.typing import ArrayLike, NDArray
@@ -129,6 +129,35 @@ class Mesh:
         from ..utils import to_pyvista
 
         return to_pyvista(self)
+    
+    def _get_entity_tags(self, entity: Literal["point", "cell"]) -> NDArray | None:
+        """
+        Get the integer tags for the specified entity type.
+
+        Parameters
+        ----------
+        entity : {'point', 'cell'}
+            Entity for which to retrieve tags.
+
+        Returns
+        -------
+        NDArray | None
+            Entity tags.
+        
+        """
+        data = self.point_data if entity == "point" else self.cell_data
+        integer_data_keys = [k for k, v in data.items() if v.dtype.kind == "i"]
+
+        for key in integer_data_keys:
+            if key in self.metadata:
+                id_to_tag = {v: k for k, v in self.metadata[key].items()}
+
+                return np.array(list(map(lambda x: id_to_tag[x], data[key])))
+            
+        if integer_data_keys:
+            return data[integer_data_keys[0]]
+        
+        return None
 
     @property
     def cell_data(self) -> dict:
@@ -139,6 +168,11 @@ class Mesh:
     def cell_sets(self) -> dict:
         """Get the cell sets dictionary."""
         return self._cell_sets
+    
+    @property
+    def cell_tags(self) -> NDArray | None:
+        """Get the cell tags array."""
+        return self._get_entity_tags("cell")
 
     @property
     def cells(self) -> list[NDArray]:
@@ -179,6 +213,11 @@ class Mesh:
     def point_sets(self) -> dict:
         """Get the point sets dictionary."""
         return self._point_sets
+    
+    @property
+    def point_tags(self) -> NDArray | None:
+        """Get the point tags array."""
+        return self._get_entity_tags("point")
 
     @property
     def time_steps(self) -> NDArray | None:
