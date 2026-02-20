@@ -69,6 +69,9 @@ class Mesh:
                 celltype = CellType[k] if isinstance(k, str) else k
                 celltypes += [int(celltype)] * len(v)
 
+        elif len(args) == 3:
+            points, cells, celltypes = args
+
         else:
             raise ValueError("invalid number of positional arguments")
 
