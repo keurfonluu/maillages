@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 from pyrequire import require_package
 
+from ._helpers import deserialize_dict, serialize_dict
+
 
 if TYPE_CHECKING:
     import pyvista as pv
@@ -32,6 +34,7 @@ def from_pyvista(mesh: pv.DataObject | pv.DataSet) -> Mesh:
     from .. import Mesh
 
     cells = get_cell_connectivity(mesh, flatten=False)  # type: ignore
+    user_dict = dict(mesh.user_dict)
 
     return Mesh(
         mesh.points,
@@ -39,7 +42,7 @@ def from_pyvista(mesh: pv.DataObject | pv.DataSet) -> Mesh:
         mesh.celltypes,
         point_data={k: v for k, v in mesh.point_data.items()},
         cell_data={k: v for k, v in mesh.cell_data.items()},
-        metadata=dict(mesh.user_dict),
+        metadata=deserialize_dict(dict(user_dict)),
     )
 
 
@@ -77,6 +80,6 @@ def to_pyvista(mesh: Mesh) -> pv.UnstructuredGrid:
     for k, v in mesh.cell_data.items():
         ugrid.cell_data[k] = v
 
-    ugrid.user_dict = mesh.metadata
+    ugrid.user_dict = serialize_dict(mesh.metadata)
 
     return ugrid
