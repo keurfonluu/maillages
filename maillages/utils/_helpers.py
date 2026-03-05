@@ -6,7 +6,7 @@ import ast
 def deserialize_dict(data: dict) -> dict:
     """
     Recursively converts stringified tuples back to tuple keys.
-    
+
     Parameters
     ----------
     data : dict
@@ -23,7 +23,7 @@ def deserialize_dict(data: dict) -> dict:
 
         for k, v in data.items():
             new_k = k
-            
+
             if isinstance(k, str) and k.startswith("(") and k.endswith(")"):
                 try:
                     parsed_key = ast.literal_eval(k)
@@ -33,14 +33,14 @@ def deserialize_dict(data: dict) -> dict:
 
                 except (ValueError, SyntaxError):
                     pass
-            
+
             new_dict[new_k] = deserialize_dict(v)
 
         return new_dict
-        
+
     else:
         return data
-    
+
 
 def serialize_dict(data: dict) -> dict:
     """
@@ -62,6 +62,6 @@ def serialize_dict(data: dict) -> dict:
             str(k) if isinstance(k, tuple) else k: serialize_dict(v)
             for k, v in data.items()
         }
-    
+
     else:
         return data
