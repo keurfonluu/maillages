@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
+from numpy.typing import NDArray
 from pyrequire import require_package
 
 
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
     import pyvista as pv
     from matplotlib.axes import Axes
     from matplotlib.collections import Collection
-    from numpy.typing import ArrayLike, NDArray
+    from numpy.typing import ArrayLike
 
 
 class Mesh:
