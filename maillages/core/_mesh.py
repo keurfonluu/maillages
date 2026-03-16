@@ -275,6 +275,9 @@ class Mesh:
                 vmax = np.log10(vmax) if vmax > 0.0 else None
 
         # Plot point data
+        levels = kwargs.pop("levels", 11)
+        colors = kwargs.pop("colors", None)
+        
         if is_point_data:
             triangles = [
                 [cell[0], cell[i], cell[i + 1]]
@@ -293,8 +296,6 @@ class Mesh:
             else:
                 safe_values = values
 
-            levels = kwargs.pop("levels", 11)
-            colors = kwargs.pop("colors", None)
             safe_values = cast(NDArray, safe_values)
             contour = ax.tricontourf if fill else ax.tricontour
             collection = contour(
