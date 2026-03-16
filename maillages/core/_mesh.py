@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from matplotlib.axes import Axes
     from matplotlib.colors import Colormap
     from matplotlib.collections import Collection
+    from matplotlib.tri import TriContourSet
     from numpy.typing import ArrayLike
 
 
@@ -135,11 +136,12 @@ class Mesh:
         log: bool = False,
         edgecolor: Optional[str | tuple[float, ...]] = None,
         linewidth: float = 0.5,
+        fill: bool = True,
         axis: int = 2,
         component: Optional[int] = None,
         ax: Optional[Axes] = None,
         **kwargs
-    ) -> Collection:
+    ) -> Collection | TriContourSet:
         """
         Create a 2D pseudocolor plot of an unstructured grid.
 
@@ -156,9 +158,13 @@ class Mesh:
         log : bool, default False
             If True, use logarithmic scaling for the colormap.
         edgecolor : str | tuple[float, ...], optional
-            Color of the wireframe edges. If None, no edges will be drawn.
+            Color of the wireframe edges. If None, no edges will be drawn. Ignored if
+            fill is False.
         linewidth : float, default 0.5
-            Width of the wireframe edges.
+            Width of the wireframe edges or contour lines.
+        fill : bool, default True
+            If True, fill the contours. If False, only draw the contour lines. Ignored
+            for cell data.
         axis : {0, 1, 2}, default 2
             Axis to project the points onto for 2D plotting.
         component : int, optional
@@ -171,8 +177,8 @@ class Mesh:
         
         Returns
         -------
-        matplotlib.collections.Collection
-            The Collection object created by the plot.
+        matplotlib.collections.Collection | matplotlib.tri.TriContourSet
+            The collection or contour set created by the plot.
 
         AI Disclosure
         -------------
@@ -280,18 +286,29 @@ class Mesh:
                 safe_values = values
 
             levels = kwargs.pop("levels", 11)
+            colors = kwargs.pop("colors", None)
             safe_values = cast(NDArray, safe_values)
-            collection = ax.tricontourf(tri, safe_values, levels=levels, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
+            contour = ax.tricontourf if fill else ax.tricontour
+            collection = contour(
+                tri,
+                safe_values,
+                levels=levels,
+                colors=colors,
+                cmap=cmap if colors is None else None,
+                vmin=vmin,
+                vmax=vmax,
+                **kwargs
+            )
             
-            if edgecolor is not None:
-                wireframe_col = PolyCollection(
+            if fill and edgecolor is not None:
+                wireframe = PolyCollection(
                     [points[cell] for cell in self.cells],
                     facecolors="none",
                     edgecolors=edgecolor,
                     linewidths=linewidth,
                     antialiased=True
                 )
-                ax.add_collection(wireframe_col)
+                ax.add_collection(wireframe)
 
         # Plot cell data
         else:
