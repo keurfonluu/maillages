@@ -126,6 +126,7 @@ class Mesh:
         self._time_steps = time_steps
         self._metadata = metadata if metadata is not None else {}
 
+    @require_package("scipy")
     @require_package("matplotlib")
     def plot(
         self,
@@ -137,6 +138,7 @@ class Mesh:
         edgecolor: Optional[str | tuple[float, ...]] = None,
         linewidth: float = 0.5,
         fill: bool = True,
+        sigma: float = 0.0,
         axis: int = 2,
         component: Optional[int] = None,
         ax: Optional[Axes] = None,
@@ -165,6 +167,8 @@ class Mesh:
         fill : bool, default True
             If True, fill the contours. If False, only draw the contour lines. Ignored
             for cell data.
+        sigma : float, default 0.0
+            Standard deviation for Gaussian kernel for smoothing of contour lines.
         axis : {0, 1, 2}, default 2
             Axis to project the points onto for 2D plotting.
         component : int, optional
@@ -247,6 +251,10 @@ class Mesh:
 
             elif values.ndim > 2:
                 raise ValueError(f"could not plot data with more than 3 dimensions")
+            
+        # Apply spatial Gaussian smoothing
+        if values is not None and is_point_data and sigma > 0.0:
+            values = self._gaussian_filter(points, values, sigma)
             
         # Set colormap normalization limits
         if values is not None:
@@ -348,6 +356,49 @@ class Mesh:
         from ..utils import to_pyvista
 
         return to_pyvista(self)
+    
+    @staticmethod
+    @require_package("scipy")
+    def _gaussian_filter(points: NDArray, values: NDArray, sigma: float) -> NDArray:
+        """
+        Apply a spatial Gaussian filter to unstructured points.
+        
+        AI Disclosure
+        -------------
+        The boilerplate of this function was written with the assistance of an AI
+        (Google Gemini 3.1 Pro). The code was subsequently reviewed, verified, and
+        tested by the maintainer.
+
+        Synthesized prompt used:
+        "Implement a spatial Gaussian filter using a KD-Tree to smooth the unstructured
+        data."
+
+        """
+        from scipy.spatial import KDTree
+        import numpy as np
+        
+        tree = KDTree(points)
+        smoothed_values = np.empty_like(values)
+        radius = 3.0 * sigma 
+        
+        for i, point in enumerate(points):
+            ids = tree.query_ball_point(point, r=radius)
+            neighbor_vals = values[ids]
+            neighbor_points = points[ids]
+            
+            # Calculate squared distances from the target point
+            d2 = np.sum((neighbor_points - point)**2, axis=1)
+            valid = np.isfinite(neighbor_vals)
+
+            if np.sum(valid) == 0:
+                smoothed_values[i] = np.nan
+                continue
+                
+            # Apply Gaussian weight function and calculate weighted average
+            weights = np.exp(-d2[valid] / (2 * sigma**2))
+            smoothed_values[i] = np.sum(weights * neighbor_vals[valid]) / np.sum(weights)
+            
+        return smoothed_values
 
     def _get_entity_tags(
         self, entity: Literal["point", "cell"]
