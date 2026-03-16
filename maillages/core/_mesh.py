@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 
     import pyvista as pv
     from matplotlib.axes import Axes
-    from matplotlib.colors import Colormap
     from matplotlib.collections import Collection
+    from matplotlib.colors import Colormap
     from matplotlib.tri import TriContourSet
     from numpy.typing import ArrayLike
 
@@ -142,7 +142,7 @@ class Mesh:
         axis: int = 2,
         component: Optional[int] = None,
         ax: Optional[Axes] = None,
-        **kwargs
+        **kwargs,
     ) -> Collection | TriContourSet:
         """
         Create a 2D pseudocolor plot of an unstructured grid.
@@ -178,7 +178,7 @@ class Mesh:
         **kwargs : dict
             Additional keyword arguments. See ``matplotlib.tri.Triangulation`` and
             ``matplotlib.collections.PolyCollection`` for more details.
-        
+
         Returns
         -------
         matplotlib.collections.Collection | matplotlib.tri.TriContourSet
@@ -200,16 +200,19 @@ class Mesh:
         NaN/inf values without crashing the triangulation engine."
 
         """
-        import numpy as np
         import matplotlib.pyplot as plt
         import matplotlib.tri as mtri
+        import numpy as np
         from matplotlib.collections import PolyCollection
+
         from .. import CellType
 
         ax = ax if ax is not None else plt.gca()
         points = self.points[:, np.delete(np.arange(3), axis)]
 
-        if not np.isin(self.celltypes, [CellType.triangle, CellType.quad, CellType.polygon]).all():
+        if not np.isin(
+            self.celltypes, [CellType.triangle, CellType.quad, CellType.polygon]
+        ).all():
             raise NotImplementedError
 
         # Determine data type and values for coloring
@@ -227,7 +230,9 @@ class Mesh:
                     is_point_data = False
 
                 else:
-                    raise ValueError(f"could not find data array named '{c}' in point or cell data")
+                    raise ValueError(
+                        f"could not find data array named '{c}' in point or cell data"
+                    )
 
             else:
                 values = np.asanyarray(c, dtype=float)
@@ -239,8 +244,10 @@ class Mesh:
                     is_point_data = False
 
                 else:
-                    raise ValueError(f"could not determine data type from provided values with length {len(values)}")
-                
+                    raise ValueError(
+                        f"could not determine data type from provided values with length {len(values)}"
+                    )
+
         # Handle component selection for multi-component data
         if values is not None and values.ndim > 1:
             component = component if component is not None else -1
@@ -251,11 +258,11 @@ class Mesh:
 
             elif values.ndim > 2:
                 raise ValueError(f"could not plot data with more than 3 dimensions")
-            
+
         # Apply spatial Gaussian smoothing
         if values is not None and is_point_data and sigma > 0.0:
             values = self._gaussian_filter(points, values, sigma)
-            
+
         # Set colormap normalization limits
         if values is not None:
             vmin = np.nanmin(values) if vmin is None else vmin
@@ -267,7 +274,7 @@ class Mesh:
             values = np.copy(values)
             values[mask] = np.log10(values[mask])
             values[~mask] = np.nan
-            
+
             if vmin is not None:
                 vmin = np.log10(vmin) if vmin > 0.0 else None
 
@@ -277,21 +284,23 @@ class Mesh:
         # Plot point data
         levels = kwargs.pop("levels", 11)
         colors = kwargs.pop("colors", None)
-        
+
         if is_point_data:
             triangles = [
                 [cell[0], cell[i], cell[i + 1]]
                 for cell in self.cells
                 for i in range(1, len(cell) - 1)
-            ]       
+            ]
             tri = mtri.Triangulation(points[:, 0], points[:, 1], triangles)
-            
+
             if values is not None and not np.isfinite(values).all():
                 invalid_nodes = ~np.isfinite(values)
                 mask = np.any(invalid_nodes[tri.triangles], axis=1)
                 tri.set_mask(mask)
                 safe_values = np.copy(values)
-                safe_values[invalid_nodes] = np.nanmean(values) if not np.isnan(values).all() else 0.0
+                safe_values[invalid_nodes] = (
+                    np.nanmean(values) if not np.isnan(values).all() else 0.0
+                )
 
             else:
                 safe_values = values
@@ -306,16 +315,16 @@ class Mesh:
                 cmap=cmap if colors is None else None,
                 vmin=vmin,
                 vmax=vmax,
-                **kwargs
+                **kwargs,
             )
-            
+
             if fill and edgecolor is not None:
                 wireframe = PolyCollection(
                     [points[cell] for cell in self.cells],
                     facecolors="none",
                     edgecolors=edgecolor,
                     linewidths=linewidth,
-                    antialiased=True
+                    antialiased=True,
                 )
                 ax.add_collection(wireframe)
 
@@ -327,16 +336,16 @@ class Mesh:
                 linewidths=linewidth,
                 cmap=cmap,
                 antialiased=edgecolor is not None,
-                **kwargs
+                **kwargs,
             )
-            
+
             if values is not None:
                 collection.set_array(values)
                 collection.set_clim(vmin, vmax)
-            
+
             ax.add_collection(collection)
 
-        # Set axis limits and aspect ratio            
+        # Set axis limits and aspect ratio
         ax.set_xlim(points[:, 0].min(), points[:, 0].max())
         ax.set_ylim(points[:, 1].min(), points[:, 1].max())
         ax.set_aspect("equal")
@@ -357,13 +366,13 @@ class Mesh:
         from ..utils import to_pyvista
 
         return to_pyvista(self)
-    
+
     @staticmethod
     @require_package("scipy")
     def _gaussian_filter(points: NDArray, values: NDArray, sigma: float) -> NDArray:
         """
         Apply a spatial Gaussian filter to unstructured points.
-        
+
         AI Disclosure
         -------------
         The boilerplate of this function was written with the assistance of an AI
@@ -375,30 +384,32 @@ class Mesh:
         data."
 
         """
-        from scipy.spatial import KDTree
         import numpy as np
-        
+        from scipy.spatial import KDTree
+
         tree = KDTree(points)
         smoothed_values = np.empty_like(values)
-        radius = 3.0 * sigma 
-        
+        radius = 3.0 * sigma
+
         for i, point in enumerate(points):
             ids = tree.query_ball_point(point, r=radius)
             neighbor_vals = values[ids]
             neighbor_points = points[ids]
-            
+
             # Calculate squared distances from the target point
-            d2 = np.sum((neighbor_points - point)**2, axis=1)
+            d2 = np.sum((neighbor_points - point) ** 2, axis=1)
             valid = np.isfinite(neighbor_vals)
 
             if np.sum(valid) == 0:
                 smoothed_values[i] = np.nan
                 continue
-                
+
             # Apply Gaussian weight function and calculate weighted average
             weights = np.exp(-d2[valid] / (2 * sigma**2))
-            smoothed_values[i] = np.sum(weights * neighbor_vals[valid]) / np.sum(weights)
-            
+            smoothed_values[i] = np.sum(weights * neighbor_vals[valid]) / np.sum(
+                weights
+            )
+
         return smoothed_values
 
     def _get_entity_tags(
