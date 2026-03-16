@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
     import pyvista as pv
     from matplotlib.axes import Axes
+    from matplotlib.colors import Colormap
     from matplotlib.collections import Collection
     from numpy.typing import ArrayLike
 
@@ -128,7 +129,7 @@ class Mesh:
     def plot(
         self,
         c: Optional[str | ArrayLike] = None,
-        cmap: str = "viridis",
+        cmap: str | Colormap = "viridis",
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
         log: bool = False,
@@ -146,8 +147,8 @@ class Mesh:
         ----------
         c : str | ArrayLike, optional
             Data array name or values to use for coloring.
-        cmap : str, default 'viridis'
-            Colormap.
+        cmap : str | Colormap, default 'viridis'
+            Colormap to use for coloring.
         vmin : float, optional
             Minimum data value for colormap normalization.
         vmax : float, optional
