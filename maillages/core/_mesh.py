@@ -10,6 +10,8 @@ if TYPE_CHECKING:
     from typing import Literal, Optional
 
     import pyvista as pv
+    from matplotlib.axes import Axes
+    from matplotlib.collections import PolyCollection
     from numpy.typing import ArrayLike, NDArray
 
 
@@ -25,6 +27,9 @@ class Mesh:
         - points, cell_dict: where points is an (N, 2) or (N, 3) array of point
         coordinates and cell_dict is a dictionary mapping cell types to arrays of cell
         connectivity. Cell types can be specified as either strings or integers.
+        - points, cells, celltypes: where points is an (N, 2) or (N, 3) array of point
+        coordinates, cells is a list of arrays of cell connectivity, and celltypes is
+        an array of integers specifying the cell type for each cell.
 
     point_data : dict, optional
         Dictionary containing point data arrays.
@@ -117,6 +122,74 @@ class Mesh:
         self._cell_sets = cell_sets
         self._time_steps = time_steps
         self._metadata = metadata if metadata is not None else {}
+
+    def plot(
+        self,
+        c: Optional[str | ArrayLike] = None,
+        cmap: str = "viridis",
+        edgecolor: Optional[str] = None,
+        linewidth: float = 0.5,
+        axis: int = 2,
+        ax: Optional[Axes] = None,
+        **kwargs
+    ) -> PolyCollection:
+        """
+        Create a 2D pseudocolor plot of an unstructured grid.
+
+        Parameters
+        ----------
+        c : str | ArrayLike, optional
+            Data array name or values to use for coloring.
+        cmap : str, default 'viridis'
+            Colormap to use for coloring.
+        edgecolor : str, optional
+            Color of the wireframe edges. If None, no edges will be drawn.
+        linewidth : float, default 0.5
+            Width of the wireframe edges.
+        axis : {0, 1, 2}, default 2
+            Axis to project the points onto for 2D plotting.
+        ax : matplotlib.axes.Axes, optional
+            Matplotlib Axes object to plot on. If None, the current axes will be used.
+        **kwargs : dict
+            Additional keyword arguments passed to PolyCollection.
+        
+        Returns
+        -------
+        matplotlib.collections.PolyCollection
+            The PolyCollection object created by the plot.
+
+        """
+        import matplotlib.pyplot as plt
+        from matplotlib.collections import PolyCollection
+
+        from .. import CellType
+
+        ax = ax if ax is not None else plt.gca()
+        points = self.points[:, np.delete(np.arange(3), axis)]
+
+        if np.isin(self.celltypes, [CellType.triangle, CellType.quad, CellType.polygon]).all():
+            collection = PolyCollection(
+                [points[cell] for cell in self.cells],
+                edgecolors=edgecolor,
+                linewidths=linewidth,
+                cmap=cmap,
+                antialiased=edgecolor is not None,
+                **kwargs
+            )
+
+        else:
+            raise NotImplementedError
+
+        if c is not None:
+            values = self.cell_data[c] if isinstance(c, str) else np.asanyarray(c)
+            collection.set_array(values)
+
+        ax.add_collection(collection)
+        ax.set_xlim(points[:, 0].min(), points[:, 0].max())
+        ax.set_ylim(points[:, 1].min(), points[:, 1].max())
+        ax.set_aspect("equal")
+
+        return collection
 
     @require_package("pyvista")
     def to_pyvista(self) -> pv.UnstructuredGrid:
