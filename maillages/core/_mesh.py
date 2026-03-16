@@ -129,6 +129,9 @@ class Mesh:
         self,
         c: Optional[str | ArrayLike] = None,
         cmap: str = "viridis",
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        log: bool = False,
         edgecolor: Optional[str | tuple[float, ...]] = None,
         linewidth: float = 0.5,
         axis: int = 2,
@@ -145,6 +148,12 @@ class Mesh:
             Data array name or values to use for coloring.
         cmap : str, default 'viridis'
             Colormap.
+        vmin : float, optional
+            Minimum data value for colormap normalization.
+        vmax : float, optional
+            Maximum data value for colormap normalization.
+        log : bool, default False
+            If True, use logarithmic scaling for the colormap.
         edgecolor : str | tuple[float, ...], optional
             Color of the wireframe edges. If None, no edges will be drawn.
         linewidth : float, default 0.5
@@ -231,6 +240,24 @@ class Mesh:
 
             elif values.ndim > 2:
                 raise ValueError(f"could not plot data with more than 3 dimensions")
+            
+        # Set colormap normalization limits
+        if values is not None:
+            vmin = np.nanmin(values) if vmin is None else vmin
+            vmax = np.nanmax(values) if vmax is None else vmax
+
+        # Set log scale
+        if values is not None and log:
+            mask = values > 0.0
+            values = np.copy(values)
+            values[mask] = np.log10(values[mask])
+            values[~mask] = np.nan
+            
+            if vmin is not None:
+                vmin = np.log10(vmin) if vmin > 0.0 else None
+
+            if vmax is not None:
+                vmax = np.log10(vmax) if vmax > 0.0 else None
 
         # Plot point data
         if is_point_data:
@@ -253,7 +280,7 @@ class Mesh:
 
             levels = kwargs.pop("levels", 11)
             safe_values = cast(NDArray, safe_values)
-            collection = ax.tricontourf(tri, safe_values, levels=levels, cmap=cmap, **kwargs)
+            collection = ax.tricontourf(tri, safe_values, levels=levels, cmap=cmap, vmin=vmin, vmax=vmax, **kwargs)
             
             if edgecolor is not None:
                 wireframe_col = PolyCollection(
@@ -278,6 +305,7 @@ class Mesh:
             
             if values is not None:
                 collection.set_array(values)
+                collection.set_clim(vmin, vmax)
             
             ax.add_collection(collection)
 
