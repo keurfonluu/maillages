@@ -131,6 +131,7 @@ class Mesh:
         edgecolor: Optional[str | tuple[float, ...]] = None,
         linewidth: float = 0.5,
         axis: int = 2,
+        component: Optional[int] = None,
         ax: Optional[Axes] = None,
         **kwargs
     ) -> Collection:
@@ -149,6 +150,8 @@ class Mesh:
             Width of the wireframe edges.
         axis : {0, 1, 2}, default 2
             Axis to project the points onto for 2D plotting.
+        component : int, optional
+            Component of the data array to plot if it has multiple components.
         ax : matplotlib.axes.Axes, optional
             Axes to plot on. If None, use current axes.
         **kwargs : dict
@@ -201,6 +204,17 @@ class Mesh:
 
                 else:
                     raise ValueError(f"could not determine data type from provided values with length {len(values)}")
+                
+        # Handle component selection for multi-component data
+        if values is not None and values.ndim > 1:
+            component = component if component is not None else -1
+            values = values[..., component]
+
+            if values.ndim == 2:
+                values = np.linalg.norm(values, axis=-1)
+
+            elif values.ndim > 2:
+                raise ValueError(f"could not plot data with more than 3 dimensions")
 
         # Plot point data
         if is_point_data:
