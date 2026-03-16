@@ -164,6 +164,21 @@ class Mesh:
         matplotlib.collections.Collection
             The Collection object created by the plot.
 
+        AI Disclosure
+        -------------
+        The boilerplate of this function was written with the assistance of an AI
+        (Google Gemini 3.1 Pro). The code was subsequently reviewed, verified, and
+        tested by the maintainer.
+
+        Synthesized prompt used:
+        "Write a Python method to plot a 2D unstructured grid of mixed polygons
+        (triangles, quads, arbitrary polygons). The method must take an optional data
+        input and automatically infer if it represents cell data or point data based on
+        its length. For cell data, render the mesh using a flat-shaded PolyCollection.
+        For point data, decompose the polygons into a triangle fan and render it using
+        VTK-style filled contours (tricontourf). Implement safety masking to handle
+        NaN/inf values without crashing the triangulation engine."
+
         """
         import numpy as np
         import matplotlib.pyplot as plt
