@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 from pyrequire import require_package
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     import pyvista as pv
     from matplotlib.axes import Axes
-    from matplotlib.collections import PolyCollection
+    from matplotlib.collections import Collection
     from numpy.typing import ArrayLike, NDArray
 
 
@@ -123,6 +123,7 @@ class Mesh:
         self._time_steps = time_steps
         self._metadata = metadata if metadata is not None else {}
 
+    @require_package("matplotlib")
     def plot(
         self,
         c: Optional[str | ArrayLike] = None,
@@ -132,7 +133,7 @@ class Mesh:
         axis: int = 2,
         ax: Optional[Axes] = None,
         **kwargs
-    ) -> PolyCollection:
+    ) -> Collection:
         """
         Create a 2D pseudocolor plot of an unstructured grid.
 
@@ -141,7 +142,7 @@ class Mesh:
         c : str | ArrayLike, optional
             Data array name or values to use for coloring.
         cmap : str, default 'viridis'
-            Colormap to use for coloring.
+            Colormap.
         edgecolor : str, optional
             Color of the wireframe edges. If None, no edges will be drawn.
         linewidth : float, default 0.5
@@ -149,25 +150,93 @@ class Mesh:
         axis : {0, 1, 2}, default 2
             Axis to project the points onto for 2D plotting.
         ax : matplotlib.axes.Axes, optional
-            Matplotlib Axes object to plot on. If None, the current axes will be used.
+            Axes to plot on. If None, use current axes.
         **kwargs : dict
-            Additional keyword arguments passed to PolyCollection.
+            Additional keyword arguments. See ``matplotlib.tri.Triangulation`` and
+            ``matplotlib.collections.PolyCollection`` for more details.
         
         Returns
         -------
-        matplotlib.collections.PolyCollection
-            The PolyCollection object created by the plot.
+        matplotlib.collections.Collection
+            The Collection object created by the plot.
 
         """
+        import numpy as np
         import matplotlib.pyplot as plt
+        import matplotlib.tri as mtri
         from matplotlib.collections import PolyCollection
-
         from .. import CellType
 
         ax = ax if ax is not None else plt.gca()
         points = self.points[:, np.delete(np.arange(3), axis)]
 
-        if np.isin(self.celltypes, [CellType.triangle, CellType.quad, CellType.polygon]).all():
+        if not np.isin(self.celltypes, [CellType.triangle, CellType.quad, CellType.polygon]).all():
+            raise NotImplementedError
+
+        # Determine data type and values for coloring
+        values = None
+        is_point_data = False
+
+        if c is not None:
+            if isinstance(c, str):
+                if c in self.point_data:
+                    values = np.asanyarray(self.point_data[c], dtype=float)
+                    is_point_data = True
+
+                elif c in self.cell_data:
+                    values = np.asanyarray(self.cell_data[c], dtype=float)
+                    is_point_data = False
+
+                else:
+                    raise ValueError(f"could not find data array named '{c}' in point or cell data")
+
+            else:
+                values = np.asanyarray(c, dtype=float)
+
+                if len(values) == len(self.points):
+                    is_point_data = True
+
+                elif len(values) == len(self.cells):
+                    is_point_data = False
+
+                else:
+                    raise ValueError(f"could not determine data type from provided values with length {len(values)}")
+
+        # Plot point data
+        if is_point_data:
+            triangles = [
+                [cell[0], cell[i], cell[i + 1]]
+                for cell in self.cells
+                for i in range(1, len(cell) - 1)
+            ]       
+            tri = mtri.Triangulation(points[:, 0], points[:, 1], triangles)
+            
+            if values is not None and not np.isfinite(values).all():
+                invalid_nodes = ~np.isfinite(values)
+                mask = np.any(invalid_nodes[tri.triangles], axis=1)
+                tri.set_mask(mask)
+                safe_values = np.copy(values)
+                safe_values[invalid_nodes] = np.nanmean(values) if not np.isnan(values).all() else 0.0
+
+            else:
+                safe_values = values
+
+            levels = kwargs.pop("levels", 11)
+            safe_values = cast(NDArray, safe_values)
+            collection = ax.tricontourf(tri, safe_values, levels=levels, cmap=cmap, **kwargs)
+            
+            if edgecolor is not None:
+                wireframe_col = PolyCollection(
+                    [points[cell] for cell in self.cells],
+                    facecolors="none",
+                    edgecolors=edgecolor,
+                    linewidths=linewidth,
+                    antialiased=True
+                )
+                ax.add_collection(wireframe_col)
+
+        # Plot cell data
+        else:
             collection = PolyCollection(
                 [points[cell] for cell in self.cells],
                 edgecolors=edgecolor,
@@ -176,15 +245,13 @@ class Mesh:
                 antialiased=edgecolor is not None,
                 **kwargs
             )
+            
+            if values is not None:
+                collection.set_array(values)
+            
+            ax.add_collection(collection)
 
-        else:
-            raise NotImplementedError
-
-        if c is not None:
-            values = self.cell_data[c] if isinstance(c, str) else np.asanyarray(c)
-            collection.set_array(values)
-
-        ax.add_collection(collection)
+        # Set axis limits and aspect ratio            
         ax.set_xlim(points[:, 0].min(), points[:, 0].max())
         ax.set_ylim(points[:, 1].min(), points[:, 1].max())
         ax.set_aspect("equal")
