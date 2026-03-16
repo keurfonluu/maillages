@@ -128,7 +128,7 @@ class Mesh:
         self,
         c: Optional[str | ArrayLike] = None,
         cmap: str = "viridis",
-        edgecolor: Optional[str] = None,
+        edgecolor: Optional[str | tuple[float, ...]] = None,
         linewidth: float = 0.5,
         axis: int = 2,
         ax: Optional[Axes] = None,
@@ -143,7 +143,7 @@ class Mesh:
             Data array name or values to use for coloring.
         cmap : str, default 'viridis'
             Colormap.
-        edgecolor : str, optional
+        edgecolor : str | tuple[float, ...], optional
             Color of the wireframe edges. If None, no edges will be drawn.
         linewidth : float, default 0.5
             Width of the wireframe edges.
