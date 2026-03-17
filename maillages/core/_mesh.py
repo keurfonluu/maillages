@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -214,6 +215,10 @@ class Mesh:
             self.celltypes, [CellType.triangle, CellType.quad, CellType.polygon]
         ).all():
             raise NotImplementedError
+        
+        # Additional keyword arguments for contouring
+        levels = kwargs.pop("levels", 11)
+        colors = kwargs.pop("colors", None)
 
         # Determine data type and values for coloring
         values = None
@@ -269,22 +274,24 @@ class Mesh:
             vmax = np.nanmax(values) if vmax is None else vmax
 
         # Set log scale
-        if values is not None and log:
-            mask = values > 0.0
-            values = np.copy(values)
-            values[mask] = np.log10(values[mask])
-            values[~mask] = np.nan
+        if log:
+            if values is not None:
+                mask = values > 0.0
+                values = np.copy(values)
+                values[mask] = np.log10(values[mask])
+                values[~mask] = np.nan
 
-            if vmin is not None:
-                vmin = np.log10(vmin) if vmin > 0.0 else None
+                if vmin is not None:
+                    vmin = np.log10(vmin) if vmin > 0.0 else None
 
-            if vmax is not None:
-                vmax = np.log10(vmax) if vmax > 0.0 else None
+                if vmax is not None:
+                    vmax = np.log10(vmax) if vmax > 0.0 else None
+
+            if isinstance(levels, Sequence):
+                levels = np.array(levels)
+                levels = np.log10(levels[levels > 0.0])
 
         # Plot point data
-        levels = kwargs.pop("levels", 11)
-        colors = kwargs.pop("colors", None)
-
         if is_point_data:
             triangles = [
                 [cell[0], cell[i], cell[i + 1]]
