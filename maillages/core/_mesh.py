@@ -279,10 +279,13 @@ class Mesh:
                 mask = values > 0.0
                 values = np.copy(values)
                 values[mask] = np.log10(values[mask])
-                values[~mask] = np.nan
 
                 if vmin is not None:
                     vmin = np.log10(vmin) if vmin > 0.0 else None
+                    values[~mask] = vmin
+
+                else:
+                    values[~mask] = np.nan
 
                 if vmax is not None:
                     vmax = np.log10(vmax) if vmax > 0.0 else None
