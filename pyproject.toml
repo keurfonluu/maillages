@@ -40,8 +40,10 @@ dependencies = [
 [project.optional-dependencies]
 full = [
     "h5py",
+    "matplotlib",
     "pyvista >= 0.45",
     "pyvista-gridder >= 0.5.0",
+    "scipy",
 ]
 
 [project.urls]
