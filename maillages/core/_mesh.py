@@ -127,6 +127,54 @@ class Mesh:
         self._time_steps = time_steps
         self._metadata = metadata if metadata is not None else {}
 
+    def __getitem__(self, key: int | ArrayLike | slice) -> Mesh:
+        """
+        Select a subset of the mesh based on cell indices.
+
+        Parameters
+        ----------
+        key : int | ArrayLike | slice
+            Indices of the cells to select.
+
+        Returns
+        -------
+        maillages.Mesh
+            A new mesh object containing only the selected cells and associated data.
+
+        """
+        # Mask for selecting cells
+        cell_mask = np.zeros(self.n_cells, dtype=bool)
+        cell_mask[key] = True
+
+        # Select cells and cell types
+        cells = [cell for cell, mask_ in zip(self.cells, cell_mask) if mask_]
+        celltypes = self.celltypes[cell_mask]
+
+        # Select points and remap point indices
+        point_mask = np.zeros(self.n_points, dtype=bool)
+
+        for cell in cells:
+            point_mask[cell] = True
+
+        points = self.points[point_mask]
+        point_index_map = np.full(self.n_points, -1, dtype=int)
+        point_index_map[point_mask] = np.arange(point_mask.sum())
+        cells = [point_index_map[cell] for cell in cells]
+
+        # Select point and cell data
+        point_data = {k: v[point_mask] for k, v in self.point_data.items()}
+        cell_data = {k: v[cell_mask] for k, v in self.cell_data.items()}
+
+        return Mesh(
+            points,
+            cells,
+            celltypes,
+            point_data=point_data,
+            cell_data=cell_data,
+            time_steps=self.time_steps,
+            metadata=self.metadata,
+        )
+
     @require_package("scipy")
     @require_package("matplotlib")
     def plot(
