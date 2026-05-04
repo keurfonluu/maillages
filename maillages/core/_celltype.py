@@ -8,7 +8,8 @@ class CellType(IntEnum):
 
     vertex = 1
     line = 3
-    triangle = 4
+    triangle = 5
+    polygon = 7
     quad = 9
     tetra = 10
     hexahedron = 12

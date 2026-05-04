@@ -35,6 +35,7 @@ def from_pyvista(mesh: pv.DataObject | pv.DataSet) -> Mesh:
 
     cells = get_cell_connectivity(mesh, flatten=False)  # type: ignore
     user_dict = dict(mesh.user_dict)
+    time_steps = user_dict.pop("maillages:time_steps", None)
 
     return Mesh(
         mesh.points,
@@ -42,6 +43,7 @@ def from_pyvista(mesh: pv.DataObject | pv.DataSet) -> Mesh:
         mesh.celltypes,
         point_data={k: v for k, v in mesh.point_data.items()},
         cell_data={k: v for k, v in mesh.cell_data.items()},
+        time_steps=time_steps,
         metadata=deserialize_dict(dict(user_dict)),
     )
 
@@ -81,5 +83,8 @@ def to_pyvista(mesh: Mesh) -> pv.UnstructuredGrid:
         ugrid.cell_data[k] = v
 
     ugrid.user_dict = serialize_dict(mesh.metadata)
+
+    if mesh.time_steps is not None and len(mesh.time_steps) > 0:
+        ugrid.user_dict["maillages:time_steps"] = mesh.time_steps.tolist()
 
     return ugrid

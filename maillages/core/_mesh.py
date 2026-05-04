@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
+from numpy.typing import NDArray
 from pyrequire import require_package
 
 
@@ -10,7 +12,11 @@ if TYPE_CHECKING:
     from typing import Literal, Optional
 
     import pyvista as pv
-    from numpy.typing import ArrayLike, NDArray
+    from matplotlib.axes import Axes
+    from matplotlib.collections import Collection
+    from matplotlib.colors import Colormap
+    from matplotlib.tri import TriContourSet
+    from numpy.typing import ArrayLike
 
 
 class Mesh:
@@ -25,6 +31,9 @@ class Mesh:
         - points, cell_dict: where points is an (N, 2) or (N, 3) array of point
         coordinates and cell_dict is a dictionary mapping cell types to arrays of cell
         connectivity. Cell types can be specified as either strings or integers.
+        - points, cells, celltypes: where points is an (N, 2) or (N, 3) array of point
+        coordinates, cells is a list of arrays of cell connectivity, and celltypes is
+        an array of integers specifying the cell type for each cell.
 
     point_data : dict, optional
         Dictionary containing point data arrays.
@@ -118,6 +127,241 @@ class Mesh:
         self._time_steps = time_steps
         self._metadata = metadata if metadata is not None else {}
 
+    @require_package("scipy")
+    @require_package("matplotlib")
+    def plot(
+        self,
+        c: Optional[str | ArrayLike] = None,
+        cmap: str | Colormap = "viridis",
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+        log: bool = False,
+        edgecolor: Optional[str | tuple[float, ...]] = None,
+        linewidth: float = 0.5,
+        fill: bool = True,
+        sigma: float = 0.0,
+        axis: int = 2,
+        component: Optional[int] = None,
+        ax: Optional[Axes] = None,
+        **kwargs,
+    ) -> Collection | TriContourSet:
+        """
+        Create a 2D pseudocolor plot of an unstructured grid.
+
+        Parameters
+        ----------
+        c : str | ArrayLike, optional
+            Data array name or values to use for coloring.
+        cmap : str | Colormap, default 'viridis'
+            Colormap to use for coloring.
+        vmin : float, optional
+            Minimum data value for colormap normalization.
+        vmax : float, optional
+            Maximum data value for colormap normalization.
+        log : bool, default False
+            If True, use logarithmic scaling for the colormap.
+        edgecolor : str | tuple[float, ...], optional
+            Color of the wireframe edges. If None, no edges will be drawn. Ignored if
+            fill is False.
+        linewidth : float, default 0.5
+            Width of the wireframe edges or contour lines.
+        fill : bool, default True
+            If True, fill the contours. If False, only draw the contour lines. Ignored
+            for cell data.
+        sigma : float, default 0.0
+            Standard deviation for Gaussian kernel for smoothing of contour lines.
+        axis : {0, 1, 2}, default 2
+            Axis to project the points onto for 2D plotting.
+        component : int, optional
+            Component of the data array to plot if it has multiple components.
+        ax : matplotlib.axes.Axes, optional
+            Axes to plot on. If None, use current axes.
+        **kwargs : dict
+            Additional keyword arguments. See ``matplotlib.tri.Triangulation`` and
+            ``matplotlib.collections.PolyCollection`` for more details.
+
+        Returns
+        -------
+        matplotlib.collections.Collection | matplotlib.tri.TriContourSet
+            The collection or contour set created by the plot.
+
+        AI Disclosure
+        -------------
+        The boilerplate of this function was written with the assistance of an AI
+        (Google Gemini 3.1 Pro). The code was subsequently reviewed, verified, and
+        tested by the maintainer.
+
+        Synthesized prompt used:
+        "Write a Python method to plot a 2D unstructured grid of mixed polygons
+        (triangles, quads, arbitrary polygons). The method must take an optional data
+        input and automatically infer if it represents cell data or point data based on
+        its length. For cell data, render the mesh using a flat-shaded PolyCollection.
+        For point data, decompose the polygons into a triangle fan and render it using
+        VTK-style filled contours (tricontourf). Implement safety masking to handle
+        NaN/inf values without crashing the triangulation engine."
+
+        """
+        import matplotlib.pyplot as plt
+        import matplotlib.tri as mtri
+        import numpy as np
+        from matplotlib.collections import PolyCollection
+
+        from .. import CellType
+
+        ax = ax if ax is not None else plt.gca()
+        points = self.points[:, np.delete(np.arange(3), axis)]
+
+        if not np.isin(
+            self.celltypes, [CellType.triangle, CellType.quad, CellType.polygon]
+        ).all():
+            raise NotImplementedError
+
+        # Additional keyword arguments for contouring
+        levels = kwargs.pop("levels", 11)
+        colors = kwargs.pop("colors", None)
+
+        # Determine data type and values for coloring
+        values = None
+        is_point_data = False
+
+        if c is not None:
+            if isinstance(c, str):
+                if c in self.point_data:
+                    values = np.asanyarray(self.point_data[c], dtype=float)
+                    is_point_data = True
+
+                elif c in self.cell_data:
+                    values = np.asanyarray(self.cell_data[c], dtype=float)
+                    is_point_data = False
+
+                else:
+                    raise ValueError(
+                        f"could not find data array named '{c}' in point or cell data"
+                    )
+
+            else:
+                values = np.asanyarray(c, dtype=float)
+
+                if len(values) == len(self.points):
+                    is_point_data = True
+
+                elif len(values) == len(self.cells):
+                    is_point_data = False
+
+                else:
+                    raise ValueError(
+                        f"could not determine data type from provided values with length {len(values)}"
+                    )
+
+        # Handle component selection for multi-component data
+        if values is not None and values.ndim > 1:
+            component = component if component is not None else -1
+            values = values[..., component]
+
+            if values.ndim == 2:
+                values = np.linalg.norm(values, axis=-1)
+
+            elif values.ndim > 2:
+                raise ValueError(f"could not plot data with more than 3 dimensions")
+
+        # Apply spatial Gaussian smoothing
+        if values is not None and is_point_data and sigma > 0.0:
+            values = self._gaussian_filter(points, values, sigma)
+
+        # Set colormap normalization limits
+        if values is not None:
+            vmin = np.nanmin(values) if vmin is None else vmin
+            vmax = np.nanmax(values) if vmax is None else vmax
+
+        # Set log scale
+        if log:
+            if values is not None:
+                mask = values > 0.0
+                values = np.copy(values)
+                values[mask] = np.log10(values[mask])
+
+                if vmin is not None:
+                    vmin = np.log10(vmin) if vmin > 0.0 else None
+                    values[~mask] = vmin
+
+                else:
+                    values[~mask] = np.nan
+
+                if vmax is not None:
+                    vmax = np.log10(vmax) if vmax > 0.0 else None
+
+            if isinstance(levels, Sequence):
+                levels = np.array(levels)
+                levels = np.log10(levels[levels > 0.0])
+
+        # Plot point data
+        if is_point_data:
+            triangles = [
+                [cell[0], cell[i], cell[i + 1]]
+                for cell in self.cells
+                for i in range(1, len(cell) - 1)
+            ]
+            tri = mtri.Triangulation(points[:, 0], points[:, 1], triangles)
+
+            if values is not None and not np.isfinite(values).all():
+                invalid_nodes = ~np.isfinite(values)
+                mask = np.any(invalid_nodes[tri.triangles], axis=1)
+                tri.set_mask(mask)
+                safe_values = np.copy(values)
+                safe_values[invalid_nodes] = (
+                    np.nanmean(values) if not np.isnan(values).all() else 0.0
+                )
+
+            else:
+                safe_values = values
+
+            safe_values = cast(NDArray, safe_values)
+            contour = ax.tricontourf if fill else ax.tricontour
+            collection = contour(
+                tri,
+                safe_values,
+                levels=levels,
+                colors=colors,
+                cmap=cmap if colors is None else None,
+                vmin=vmin,
+                vmax=vmax,
+                **kwargs,
+            )
+
+            if fill and edgecolor is not None:
+                wireframe = PolyCollection(
+                    [points[cell] for cell in self.cells],
+                    facecolors="none",
+                    edgecolors=edgecolor,
+                    linewidths=linewidth,
+                    antialiased=True,
+                )
+                ax.add_collection(wireframe)
+
+        # Plot cell data
+        else:
+            collection = PolyCollection(
+                [points[cell] for cell in self.cells],
+                edgecolors=edgecolor,
+                linewidths=linewidth,
+                cmap=cmap,
+                antialiased=edgecolor is not None,
+                **kwargs,
+            )
+
+            if values is not None:
+                collection.set_array(values)
+                collection.set_clim(vmin, vmax)
+
+            ax.add_collection(collection)
+
+        # Set axis limits and aspect ratio
+        ax.set_xlim(points[:, 0].min(), points[:, 0].max())
+        ax.set_ylim(points[:, 1].min(), points[:, 1].max())
+        ax.set_aspect("equal")
+
+        return collection
+
     @require_package("pyvista")
     def to_pyvista(self) -> pv.UnstructuredGrid:
         """
@@ -132,6 +376,51 @@ class Mesh:
         from ..utils import to_pyvista
 
         return to_pyvista(self)
+
+    @staticmethod
+    @require_package("scipy")
+    def _gaussian_filter(points: NDArray, values: NDArray, sigma: float) -> NDArray:
+        """
+        Apply a spatial Gaussian filter to unstructured points.
+
+        AI Disclosure
+        -------------
+        The boilerplate of this function was written with the assistance of an AI
+        (Google Gemini 3.1 Pro). The code was subsequently reviewed, verified, and
+        tested by the maintainer.
+
+        Synthesized prompt used:
+        "Implement a spatial Gaussian filter using a KD-Tree to smooth the unstructured
+        data."
+
+        """
+        import numpy as np
+        from scipy.spatial import KDTree
+
+        tree = KDTree(points)
+        smoothed_values = np.empty_like(values)
+        radius = 3.0 * sigma
+
+        for i, point in enumerate(points):
+            ids = tree.query_ball_point(point, r=radius)
+            neighbor_vals = values[ids]
+            neighbor_points = points[ids]
+
+            # Calculate squared distances from the target point
+            d2 = np.sum((neighbor_points - point) ** 2, axis=1)
+            valid = np.isfinite(neighbor_vals)
+
+            if np.sum(valid) == 0:
+                smoothed_values[i] = np.nan
+                continue
+
+            # Apply Gaussian weight function and calculate weighted average
+            weights = np.exp(-d2[valid] / (2 * sigma**2))
+            smoothed_values[i] = np.sum(weights * neighbor_vals[valid]) / np.sum(
+                weights
+            )
+
+        return smoothed_values
 
     def _get_entity_tags(
         self, entity: Literal["point", "cell"]
