@@ -215,7 +215,7 @@ class Mesh:
             self.celltypes, [CellType.triangle, CellType.quad, CellType.polygon]
         ).all():
             raise NotImplementedError
-        
+
         # Additional keyword arguments for contouring
         levels = kwargs.pop("levels", 11)
         colors = kwargs.pop("colors", None)

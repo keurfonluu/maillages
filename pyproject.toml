@@ -38,12 +38,25 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+test = [
+    "coverage",
+    "pytest",
+    "pytest-cov",
+]
 full = [
     "h5py",
     "matplotlib",
+    "numpy >= 1.19.3",
     "pyvista >= 0.45",
     "pyvista-gridder >= 0.5.0",
     "scipy",
+]
+dev = [
+    "build",
+    "invoke",
+    "maillages[full]",
+    "ruff",
+    "twine",
 ]
 
 [project.urls]
@@ -53,6 +66,9 @@ Issues = "https://github.com/keurfonluu/maillages/issues"
 
 [tool.setuptools.packages.find]
 include = ["maillages*"]
+
+[tool.setuptools.package-data]
+"pymeuk" = ["py.typed"]
 
 [tool.setuptools.dynamic]
 version = {attr = "maillages.__about__.__version__"}
