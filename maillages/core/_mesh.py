@@ -127,6 +127,148 @@ class Mesh:
         self._time_steps = time_steps
         self._metadata = metadata if metadata is not None else {}
 
+    def __call__(self, t: ArrayLike, eps: float = 1.0e-8) -> Mesh:
+        """
+        Interpolate the mesh data to the specified time step(s).
+
+        Parameters
+        ----------
+        t : ArrayLike
+            Time step(s) to interpolate to. Must be within the range of time steps
+            specified in the mesh.
+        eps : float, default 1.0e-8
+            Tolerance for determining if a time step matches an existing time step.
+
+        Returns
+        -------
+        maillages.Mesh
+            New mesh object with data interpolated to the specified time step(s).
+
+        """
+        t = np.atleast_1d(t)
+        t = np.sort(t) if t.ndim == 1 else t
+
+        if self.time_steps is None or len(self.time_steps) < 2:
+            raise ValueError("could not interpolate mesh without at least 2 time steps")
+
+        if t[0] < self.time_steps[0] or t[-1] > self.time_steps[-1]:
+            raise ValueError(
+                f"could not interpolate mesh outside of time step range ({self.time_steps[0]}, {self.time_steps[-1]})"
+            )
+
+        # Find the indices of the time steps for interpolation
+        ids = np.searchsorted(self.time_steps, t, side="right") - 1
+
+        # Ensure arrays are at least 2D
+        n_time_steps = self.n_time_steps
+        point_data_2d, cell_data_2d = {}, {}
+
+        for k, v in self.point_data.items():
+            point_data_2d[k] = (
+                np.repeat(v[:, np.newaxis], n_time_steps, axis=1)
+                if v.ndim == 1
+                else np.atleast_2d(v)
+            )
+
+        for k, v in self.cell_data.items():
+            cell_data_2d[k] = (
+                np.repeat(v[:, np.newaxis], n_time_steps, axis=1)
+                if v.ndim == 1
+                else np.atleast_2d(v)
+            )
+
+        # Interpolate point and cell data to the specified time steps
+        point_data, cell_data = {}, {}
+
+        for t_, id_ in zip(t, ids):
+            if np.isclose(t_, self.time_steps[id_], atol=eps):
+                for k, v in point_data_2d.items():
+                    point_data.setdefault(k, []).append(v[..., id_])
+
+                for k, v in cell_data_2d.items():
+                    cell_data.setdefault(k, []).append(v[..., id_])
+
+            else:
+                t1, t2 = self.time_steps[id_], self.time_steps[id_ + 1]
+                dt = t2 - t1
+                w1, w2 = (t2 - t_) / dt, (t_ - t1) / dt
+
+                for k, v in point_data_2d.items():
+                    if v.dtype.kind == "i":
+                        point_data.setdefault(k, []).append(v[..., id_])
+
+                    else:
+                        v1, v2 = v[..., id_], v[..., id_ + 1]
+                        point_data.setdefault(k, []).append(w1 * v1 + w2 * v2)
+
+                for k, v in cell_data_2d.items():
+                    if v.dtype.kind == "i":
+                        cell_data.setdefault(k, []).append(v[..., id_])
+
+                    else:
+                        v1, v2 = v[..., id_], v[..., id_ + 1]
+                        cell_data.setdefault(k, []).append(w1 * v1 + w2 * v2)
+
+        return Mesh(
+            self.points,
+            self.cells,
+            self.celltypes,
+            point_data={
+                k: np.stack(v, axis=-1).squeeze() for k, v in point_data.items()
+            },
+            cell_data={k: np.stack(v, axis=-1).squeeze() for k, v in cell_data.items()},
+            time_steps=t,
+            metadata=self.metadata,
+        )
+
+    def __getitem__(self, key: int | ArrayLike | slice) -> Mesh:
+        """
+        Select a subset of the mesh based on cell indices.
+
+        Parameters
+        ----------
+        key : int | ArrayLike | slice
+            Indices of the cells to select.
+
+        Returns
+        -------
+        maillages.Mesh
+            New mesh object containing only the selected cells and associated data.
+
+        """
+        # Mask for selecting cells
+        cell_mask = np.zeros(self.n_cells, dtype=bool)
+        cell_mask[key] = True
+
+        # Select cells and cell types
+        cells = [cell for cell, mask_ in zip(self.cells, cell_mask) if mask_]
+        celltypes = self.celltypes[cell_mask]
+
+        # Select points and remap point indices
+        point_mask = np.zeros(self.n_points, dtype=bool)
+
+        for cell in cells:
+            point_mask[cell] = True
+
+        points = self.points[point_mask]
+        point_index_map = np.full(self.n_points, -1, dtype=int)
+        point_index_map[point_mask] = np.arange(point_mask.sum())
+        cells = [point_index_map[cell] for cell in cells]
+
+        # Select point and cell data
+        point_data = {k: v[point_mask] for k, v in self.point_data.items()}
+        cell_data = {k: v[cell_mask] for k, v in self.cell_data.items()}
+
+        return Mesh(
+            points,
+            cells,
+            celltypes,
+            point_data=point_data,
+            cell_data=cell_data,
+            time_steps=self.time_steps,
+            metadata=self.metadata,
+        )
+
     @require_package("scipy")
     @require_package("matplotlib")
     def plot(
@@ -484,6 +626,20 @@ class Mesh:
         return self._celltypes
 
     @property
+    def cell_centers(self) -> NDArray:
+        """Get the array of cell centers."""
+        from .. import CellType
+
+        centers = [
+            self.points[cell].mean(axis=0)
+            if celltype != CellType.empty
+            else [np.nan, np.nan, np.nan]
+            for cell, celltype in zip(self.cells, self.celltypes)
+        ]
+
+        return np.array(centers, dtype=float)
+
+    @property
     def metadata(self) -> dict:
         """Get the metadata dictionary."""
         return self._metadata
@@ -497,6 +653,11 @@ class Mesh:
     def n_points(self) -> int:
         """Get the total number of points in the mesh."""
         return len(self.points)
+
+    @property
+    def n_time_steps(self) -> int:
+        """Get the number of time steps in the mesh."""
+        return len(self.time_steps) if self.time_steps is not None else 1
 
     @property
     def points(self) -> NDArray:

@@ -6,6 +6,7 @@ from enum import IntEnum
 class CellType(IntEnum):
     """Enumeration of cell types."""
 
+    empty = 0
     vertex = 1
     line = 3
     triangle = 5
