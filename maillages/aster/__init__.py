@@ -1,3 +1,3 @@
 """ASTER file I/O."""
 
-from ._aster import write
+from ._aster import write as write
