@@ -622,6 +622,20 @@ class Mesh:
     def celltypes(self) -> NDArray:
         """Get the array of cell types."""
         return self._celltypes
+    
+    @property
+    def cell_centers(self) -> NDArray:
+        """Get the array of cell centers."""
+        from .. import CellType
+
+        centers = [
+            self.points[cell].mean(axis=0)
+            if celltype != CellType.empty
+            else [np.nan, np.nan, np.nan]
+            for cell, celltype in zip(self.cells, self.celltypes)
+        ]
+
+        return np.array(centers, dtype=float)
 
     @property
     def metadata(self) -> dict:
