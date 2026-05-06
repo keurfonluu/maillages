@@ -143,14 +143,14 @@ class Mesh:
         -------
         maillages.Mesh
             New mesh object with data interpolated to the specified time step(s).
-        
+
         """
         t = np.atleast_1d(t)
         t = np.sort(t) if t.ndim == 1 else t
 
         if self.time_steps is None or len(self.time_steps) < 2:
             raise ValueError("could not interpolate mesh without at least 2 time steps")
-        
+
         if t[0] < self.time_steps[0] or t[-1] > self.time_steps[-1]:
             raise ValueError(
                 f"could not interpolate mesh outside of time step range ({self.time_steps[0]}, {self.time_steps[-1]})"
@@ -204,7 +204,7 @@ class Mesh:
                 for k, v in cell_data_2d.items():
                     if v.dtype.kind == "i":
                         cell_data.setdefault(k, []).append(v[..., id_])
-                    
+
                     else:
                         v1, v2 = v[..., id_], v[..., id_ + 1]
                         cell_data.setdefault(k, []).append(w1 * v1 + w2 * v2)
@@ -213,7 +213,9 @@ class Mesh:
             self.points,
             self.cells,
             self.celltypes,
-            point_data={k: np.stack(v, axis=-1).squeeze() for k, v in point_data.items()},
+            point_data={
+                k: np.stack(v, axis=-1).squeeze() for k, v in point_data.items()
+            },
             cell_data={k: np.stack(v, axis=-1).squeeze() for k, v in cell_data.items()},
             time_steps=t,
             metadata=self.metadata,
@@ -622,7 +624,7 @@ class Mesh:
     def celltypes(self) -> NDArray:
         """Get the array of cell types."""
         return self._celltypes
-    
+
     @property
     def cell_centers(self) -> NDArray:
         """Get the array of cell centers."""
@@ -651,7 +653,7 @@ class Mesh:
     def n_points(self) -> int:
         """Get the total number of points in the mesh."""
         return len(self.points)
-    
+
     @property
     def n_time_steps(self) -> int:
         """Get the number of time steps in the mesh."""
