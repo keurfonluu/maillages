@@ -268,6 +268,61 @@ class Mesh:
             time_steps=self.time_steps,
             metadata=self.metadata,
         )
+    
+    def linearize(self) -> Mesh:
+        """
+        Convert quadratic cells to linear cells.
+
+        Returns
+        -------
+        maillages.Mesh
+            New mesh object with quadratic cells converted to linear cells.
+        
+        """
+        from .. import CellType
+
+        # Convert quadratic cells to linear cells by removing mid-edge nodes
+        cells, celltypes = [], []
+
+        for cell, celltype in zip(self.cells, self.celltypes):
+            if celltype == CellType.line3:
+                cells.append(cell[:2])
+                celltypes.append(CellType.line)
+
+            elif celltype == CellType.triangle6:
+                cells.append(cell[:3])
+                celltypes.append(CellType.triangle)
+
+            elif celltype == CellType.quad8:
+                cells.append(cell[:4])
+                celltypes.append(CellType.quad)
+
+            else:
+                cells.append(cell)
+                celltypes.append(celltype)
+
+        # Remove unused points and point data and remap point indices
+        point_mask = np.zeros(self.n_points, dtype=bool)
+
+        for cell in cells:
+            point_mask[cell] = True
+
+        points = self.points[point_mask]
+        point_index_map = np.full(self.n_points, -1, dtype=int)
+        point_index_map[point_mask] = np.arange(point_mask.sum())
+        cells = [point_index_map[cell] for cell in cells]
+
+        return Mesh(
+            points,
+            cells,
+            celltypes,
+            point_data={k: v[point_mask] for k, v in self.point_data.items()},
+            cell_data=self.cell_data,
+            point_sets=self.point_sets,
+            cell_sets=self.cell_sets,
+            time_steps=self.time_steps,
+            metadata=self.metadata,
+        )
 
     @require_package("scipy")
     @require_package("matplotlib")
