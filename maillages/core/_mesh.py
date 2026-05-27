@@ -268,7 +268,7 @@ class Mesh:
             time_steps=self.time_steps,
             metadata=self.metadata,
         )
-    
+
     def linearize(self) -> Mesh:
         """
         Convert quadratic cells to linear cells.
@@ -277,7 +277,7 @@ class Mesh:
         -------
         maillages.Mesh
             New mesh object with quadratic cells converted to linear cells.
-        
+
         """
         from .. import CellType
 
