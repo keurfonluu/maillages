@@ -39,7 +39,6 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "coverage",
     "pytest",
     "pytest-cov",
 ]
@@ -47,6 +46,7 @@ full = [
     "h5py",
     "matplotlib",
     "numpy >= 1.19.3",
+    "pyshp",
     "pyvista >= 0.45",
     "pyvista-gridder >= 0.5.0",
     "scipy",
