@@ -40,7 +40,7 @@ def read(filename: str | os.PathLike) -> Mesh:
         # Read mesh
         ens_maa = f.get("ENS_MAA")
 
-        if enumerate is None:
+        if ens_maa is None:
             raise ValueError("could not find mesh in file")
 
         ens_maa = cast(h5py.Group, ens_maa)

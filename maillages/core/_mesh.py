@@ -118,7 +118,7 @@ class Mesh:
                     )
 
         self._points = points
-        self._cells = cells
+        self._cells = [np.asanyarray(cell) for cell in cells]
         self._celltypes = np.array(celltypes)
         self._point_data = point_data
         self._cell_data = cell_data
@@ -409,7 +409,14 @@ class Mesh:
         points = self.points[:, np.delete(np.arange(3), axis)]
 
         if not np.isin(
-            self.celltypes, [CellType.triangle, CellType.quad, CellType.polygon]
+            self.celltypes,
+            [
+                CellType.vertex,
+                CellType.line,
+                CellType.triangle,
+                CellType.quad,
+                CellType.polygon,
+            ],
         ).all():
             raise NotImplementedError
 
