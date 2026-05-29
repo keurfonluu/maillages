@@ -44,7 +44,9 @@ def read(filename: str | os.PathLike) -> Mesh:
 
             shape_type = shape.shapeTypeName
             shape_z = shape.z if hasattr(shape, "z") else np.zeros(len(shape.points))
-            shape_points = [(x, y, float(z)) for (x, y), z in zip(shape.points, shape_z)]
+            shape_points = [
+                (x, y, float(z)) for (x, y), z in zip(shape.points, shape_z)
+            ]
             shape_cell = [list(range(len(points), len(points) + len(shape_points)))]
             shape_data = {k: [v] for k, v in record.as_dict().items()}
 
@@ -56,7 +58,9 @@ def read(filename: str | os.PathLike) -> Mesh:
                 # No hole
                 if shape_points[0] == shape_points[-1]:
                     shape_points = shape_points[:-1]
-                    shape_cell = [list(range(len(points), len(points) + len(shape_points)))]
+                    shape_cell = [
+                        list(range(len(points), len(points) + len(shape_points)))
+                    ]
                     shape_celltype = [CellType.polygon]
                     polygon_holes.append(-1)
 
@@ -75,7 +79,9 @@ def read(filename: str | os.PathLike) -> Mesh:
                             and point == polygon[0]
                         ):
                             shape_points_ += polygon[:-1]
-                            shape_cell.append(list(range(n_points, n_points + len(polygon) - 1)))
+                            shape_cell.append(
+                                list(range(n_points, n_points + len(polygon) - 1))
+                            )
                             shape_celltype.append(CellType.polygon)
                             polygon_holes.append(i if is_hole else -1)
                             n_points += len(polygon) - 1
@@ -92,7 +98,7 @@ def read(filename: str | os.PathLike) -> Mesh:
                 raise NotImplementedError(
                     f"shape type '{shape_type}' are not supported yet"
                 )
-            
+
             points += shape_points
             cells += shape_cell
             celltypes += shape_celltype
