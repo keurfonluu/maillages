@@ -19,3 +19,4 @@ class CellType(IntEnum):
     line3 = 21
     triangle6 = 22
     quad8 = 23
+    hexahedron20 = 25
