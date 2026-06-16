@@ -93,15 +93,12 @@ class Mesh:
             points = np.insert(points, 2, 0.0, axis=1)
 
         # Point and cell data
-        point_data = point_data if point_data is not None else {}
-        point_data = {k: np.asanyarray(v) for k, v in point_data.items()}
-
-        cell_data = cell_data if cell_data is not None else {}
-        cell_data = {k: np.asanyarray(v) for k, v in cell_data.items()}
+        point_data = {k: np.asanyarray(v) for k, v in (point_data or {}).items()}
+        cell_data = {k: np.asanyarray(v) for k, v in (cell_data or {}).items()}
 
         # Point and cell sets
-        point_sets = point_sets if point_sets is not None else {}
-        cell_sets = cell_sets if cell_sets is not None else {}
+        point_sets = point_sets or {}
+        cell_sets = cell_sets or {}
 
         # Time steps
         if time_steps is not None:
@@ -127,7 +124,7 @@ class Mesh:
         self._point_sets = point_sets
         self._cell_sets = cell_sets
         self._time_steps = time_steps
-        self._metadata = metadata if metadata is not None else {}
+        self._metadata = metadata or {}
 
     def __call__(self, t: ArrayLike, eps: float = 1.0e-8) -> Mesh:
         """

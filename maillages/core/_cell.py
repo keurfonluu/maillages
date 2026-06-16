@@ -57,10 +57,10 @@ class Cell:
 
         self._points = points
         self._celltype = celltype
-        self._point_data = {k: np.asanyarray(v) for k, v in (point_data or {}).items()}
-        self._cell_data = {k: np.asanyarray(v) for k, v in (cell_data or {}).items()}
+        self._point_data = {k: v for k, v in (point_data or {}).items()}
+        self._cell_data = {k: v for k, v in (cell_data or {}).items()}
         self._time_steps = np.asanyarray(time_steps) if time_steps is not None else None
-        self._metadata = metadata if metadata is not None else {}
+        self._metadata = metadata or {}
 
     @require_package("pyvista")
     def to_pyvista(self) -> pv.Cell:
