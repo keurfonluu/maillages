@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 from numpy.typing import NDArray
@@ -9,7 +9,7 @@ from pyrequire import require_package
 
 
 if TYPE_CHECKING:
-    from typing import Literal, Optional
+    from typing import Generator, Literal, Optional
 
     import pyvista as pv
     from matplotlib.axes import Axes
@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap
     from matplotlib.tri import TriContourSet
     from numpy.typing import ArrayLike
+
+    from .. import Cell
 
 
 class Mesh:
@@ -221,7 +223,13 @@ class Mesh:
             metadata=self.metadata,
         )
 
-    def __getitem__(self, key: int | ArrayLike | slice) -> Mesh:
+    @overload
+    def __getitem__(self, key: int) -> Cell: ...
+
+    @overload
+    def __getitem__(self, key: ArrayLike | slice) -> Mesh: ...
+
+    def __getitem__(self, key: int | ArrayLike | slice) -> Mesh | Cell:
         """
         Select a subset of the mesh based on cell indices.
 
@@ -232,10 +240,31 @@ class Mesh:
 
         Returns
         -------
-        maillages.Mesh
-            New mesh object containing only the selected cells and associated data.
+        maillages.Mesh | maillages.Cell
+            New mesh object containing only the selected cells and associated data, or a
+            single cell if ``key`` is an integer.
 
         """
+        from .. import Cell, CellType
+
+        if isinstance(key, (int, np.integer)):
+            i = int(key)
+            i = i + self.n_cells if i < 0 else i
+
+            if i < 0 or i >= self.n_cells:
+                raise IndexError("cell index out of range")
+
+            cell = self.cells[i]
+
+            return Cell(
+                self.points[cell],
+                CellType(self.celltypes[i]),
+                point_data={k: v[cell] for k, v in self.point_data.items()},
+                cell_data={k: v[i] for k, v in self.cell_data.items()},
+                time_steps=self.time_steps,
+                metadata=self.metadata,
+            )
+
         # Mask for selecting cells
         cell_mask = np.zeros(self.n_cells, dtype=bool)
         cell_mask[key] = True
@@ -268,6 +297,19 @@ class Mesh:
             time_steps=self.time_steps,
             metadata=self.metadata,
         )
+    
+    def __iter__(self) -> Generator[Cell, None, None]:
+        """
+        Iterate over the cells of the mesh.
+
+        Yields
+        ------
+        maillages.Cell
+            Cell objects from the mesh.
+
+        """
+        for i in range(self.n_cells):
+            yield cast(Cell, self[i])
 
     def linearize(self) -> Mesh:
         """
