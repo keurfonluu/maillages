@@ -255,6 +255,7 @@ class Mesh:
 
             return Cell(
                 self.points[cell],
+                cell,
                 CellType(self.celltypes[i]),
                 point_data={k: v[cell] for k, v in self.point_data.items()},
                 cell_data={k: v[i] for k, v in self.cell_data.items()},
