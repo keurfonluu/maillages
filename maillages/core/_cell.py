@@ -72,7 +72,7 @@ class Cell:
         from ..utils import to_pyvista
 
         return to_pyvista(self)
-        
+
     @property
     def cell_data(self) -> dict:
         """Get the cell data dictionary."""
@@ -102,7 +102,7 @@ class Cell:
     def points(self) -> NDArray:
         """Get the array of vertex coordinates."""
         return self._points
-    
+
     @property
     def time_steps(self) -> NDArray | None:
         """Get the array of time steps for time-dependent data."""

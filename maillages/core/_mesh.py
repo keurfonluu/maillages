@@ -294,7 +294,7 @@ class Mesh:
             time_steps=self.time_steps,
             metadata=self.metadata,
         )
-    
+
     def __iter__(self) -> Generator[Cell, None, None]:
         """
         Iterate over the cells of the mesh.

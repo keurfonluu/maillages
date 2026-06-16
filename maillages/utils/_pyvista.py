@@ -52,8 +52,10 @@ def from_pyvista(mesh: pv.DataObject | pv.DataSet) -> Mesh:
 @overload
 def to_pyvista(mesh: Mesh) -> pv.UnstructuredGrid: ...
 
+
 @overload
 def to_pyvista(mesh: Cell) -> pv.Cell: ...
+
 
 @require_package("pyvista")
 def to_pyvista(mesh: Mesh | Cell) -> pv.UnstructuredGrid | pv.Cell:
