@@ -44,6 +44,7 @@ class Cell:
     def __init__(
         self,
         points: ArrayLike,
+        point_ids: ArrayLike,
         celltype: CellType,
         point_data: Optional[dict] = None,
         cell_data: Optional[dict] = None,
@@ -52,6 +53,7 @@ class Cell:
     ) -> None:
         """Initialize a cell object."""
         self._points = np.asanyarray(points)
+        self._point_ids = np.asanyarray(point_ids)
         self._celltype = celltype
         self._point_data = point_data or {}
         self._cell_data = cell_data or {}
@@ -97,6 +99,11 @@ class Cell:
     def point_data(self) -> dict:
         """Get the point data dictionary."""
         return self._point_data
+    
+    @property
+    def point_ids(self) -> NDArray:
+        """Get the array of vertex indices."""
+        return self._point_ids
 
     @property
     def points(self) -> NDArray:
