@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
+import numpy as np
 from pyrequire import require_package
 
 from ._helpers import deserialize_dict, serialize_dict
@@ -10,7 +11,7 @@ from ._helpers import deserialize_dict, serialize_dict
 if TYPE_CHECKING:
     import pyvista as pv
 
-    from .. import Mesh
+    from .. import Cell, Mesh
 
 
 @require_package("pvgridder")
@@ -48,43 +49,58 @@ def from_pyvista(mesh: pv.DataObject | pv.DataSet) -> Mesh:
     )
 
 
+@overload
+def to_pyvista(mesh: Mesh) -> pv.UnstructuredGrid: ...
+
+@overload
+def to_pyvista(mesh: Cell) -> pv.Cell: ...
+
 @require_package("pyvista")
-def to_pyvista(mesh: Mesh) -> pv.UnstructuredGrid:
+def to_pyvista(mesh: Mesh | Cell) -> pv.UnstructuredGrid | pv.Cell:
     """
-    Convert a mesh to a PyVista grid.
+    Convert a mesh or cell to a PyVista grid or cell.
 
     Parameters
     ----------
-    mesh : maillages.Mesh
-        Input mesh.
+    mesh : maillages.Mesh | maillages.Cell
+        Input mesh or single cell.
 
     Returns
     -------
-    pyvista.UnstructuredGrid
-        Output PyVista grid.
+    pyvista.UnstructuredGrid | pyvista.Cell
+        Output PyVista grid or cell.
 
     """
     import pyvista as pv
 
-    cells = []
-    for cell in mesh.cells:
-        cells += [len(cell), *cell]
+    from .. import Cell
+
+    if isinstance(mesh, Cell):
+        cells = [mesh.n_points, *range(mesh.n_points)]
+        celltypes = [mesh.celltype]
+
+    else:
+        cells = []
+        for cell in mesh.cells:
+            cells += [len(cell), *cell]
+
+        celltypes = mesh.celltypes
 
     ugrid = pv.UnstructuredGrid(
         cells,
-        mesh.celltypes,
+        celltypes,
         mesh.points,
     )
 
     for k, v in mesh.point_data.items():
-        ugrid.point_data[k] = v
+        ugrid.point_data[k] = np.atleast_1d(v)
 
     for k, v in mesh.cell_data.items():
-        ugrid.cell_data[k] = v
+        ugrid.cell_data[k] = np.atleast_1d(v)
 
     ugrid.user_dict = serialize_dict(mesh.metadata)
 
     if mesh.time_steps is not None and len(mesh.time_steps) > 0:
         ugrid.user_dict["maillages:time_steps"] = mesh.time_steps.tolist()
 
-    return ugrid
+    return ugrid.get_cell(0) if isinstance(mesh, Cell) else ugrid
