@@ -35,6 +35,10 @@ class Cell:
     metadata : dict, optional
         Dictionary containing metadata for the cell.
 
+    Note
+    ----
+    Do not create Cell objects directly.
+
     """
 
     def __init__(
@@ -47,18 +51,10 @@ class Cell:
         metadata: Optional[dict] = None,
     ) -> None:
         """Initialize a cell object."""
-        points = np.asanyarray(points)
-
-        if points.ndim != 2 or points.shape[1] not in {2, 3}:
-            raise ValueError("points must be an array of shape (N, 2) or (N, 3)")
-
-        if points.shape[1] == 2:
-            points = np.insert(points, 2, 0.0, axis=1)
-
-        self._points = points
+        self._points = np.asanyarray(points)
         self._celltype = celltype
-        self._point_data = {k: v for k, v in (point_data or {}).items()}
-        self._cell_data = {k: v for k, v in (cell_data or {}).items()}
+        self._point_data = point_data or {}
+        self._cell_data = cell_data or {}
         self._time_steps = np.asanyarray(time_steps) if time_steps is not None else None
         self._metadata = metadata or {}
 
