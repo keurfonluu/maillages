@@ -250,5 +250,6 @@ _maillages_to_med_celltype = {
     CellType.hexahedron: "HE8",
     CellType.wedge: "PE6",
     CellType.pyramid: "PY5",
+    CellType.hexahedron20: "H20",
 }
 _med_to_maillages_celltype = {v: k for k, v in _maillages_to_med_celltype.items()}

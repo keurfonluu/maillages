@@ -297,6 +297,10 @@ class Mesh:
                 cells.append(cell[:4])
                 celltypes.append(CellType.quad)
 
+            elif celltype == CellType.hexahedron20:
+                cells.append(cell[:8])
+                celltypes.append(CellType.hexahedron)
+
             else:
                 cells.append(cell)
                 celltypes.append(celltype)
