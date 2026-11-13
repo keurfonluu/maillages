@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, overload
 
 import numpy as np
 from numpy.typing import NDArray
@@ -9,7 +9,7 @@ from pyrequire import require_package
 
 
 if TYPE_CHECKING:
-    from typing import Literal, Optional
+    from typing import Generator, Literal, Optional
 
     import pyvista as pv
     from matplotlib.axes import Axes
@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap
     from matplotlib.tri import TriContourSet
     from numpy.typing import ArrayLike
+
+    from .. import Cell
 
 
 class Mesh:
@@ -91,15 +93,12 @@ class Mesh:
             points = np.insert(points, 2, 0.0, axis=1)
 
         # Point and cell data
-        point_data = point_data if point_data is not None else {}
-        point_data = {k: np.asanyarray(v) for k, v in point_data.items()}
-
-        cell_data = cell_data if cell_data is not None else {}
-        cell_data = {k: np.asanyarray(v) for k, v in cell_data.items()}
+        point_data = {k: np.asanyarray(v) for k, v in (point_data or {}).items()}
+        cell_data = {k: np.asanyarray(v) for k, v in (cell_data or {}).items()}
 
         # Point and cell sets
-        point_sets = point_sets if point_sets is not None else {}
-        cell_sets = cell_sets if cell_sets is not None else {}
+        point_sets = point_sets or {}
+        cell_sets = cell_sets or {}
 
         # Time steps
         if time_steps is not None:
@@ -125,7 +124,7 @@ class Mesh:
         self._point_sets = point_sets
         self._cell_sets = cell_sets
         self._time_steps = time_steps
-        self._metadata = metadata if metadata is not None else {}
+        self._metadata = metadata or {}
 
     def __call__(self, t: ArrayLike, eps: float = 1.0e-8) -> Mesh:
         """
@@ -221,7 +220,13 @@ class Mesh:
             metadata=self.metadata,
         )
 
-    def __getitem__(self, key: int | ArrayLike | slice) -> Mesh:
+    @overload
+    def __getitem__(self, key: int) -> Cell: ...
+
+    @overload
+    def __getitem__(self, key: ArrayLike | slice) -> Mesh: ...
+
+    def __getitem__(self, key: int | ArrayLike | slice) -> Mesh | Cell:
         """
         Select a subset of the mesh based on cell indices.
 
@@ -232,10 +237,32 @@ class Mesh:
 
         Returns
         -------
-        maillages.Mesh
-            New mesh object containing only the selected cells and associated data.
+        maillages.Mesh | maillages.Cell
+            New mesh object containing only the selected cells and associated data, or a
+            single cell if ``key`` is an integer.
 
         """
+        from .. import Cell, CellType
+
+        if isinstance(key, (int, np.integer)):
+            i = int(key)
+            i = i + self.n_cells if i < 0 else i
+
+            if i < 0 or i >= self.n_cells:
+                raise IndexError("cell index out of range")
+
+            cell = self.cells[i]
+
+            return Cell(
+                self.points[cell],
+                cell,
+                CellType(self.celltypes[i]),
+                point_data={k: v[cell] for k, v in self.point_data.items()},
+                cell_data={k: v[i] for k, v in self.cell_data.items()},
+                time_steps=self.time_steps,
+                metadata=self.metadata,
+            )
+
         # Mask for selecting cells
         cell_mask = np.zeros(self.n_cells, dtype=bool)
         cell_mask[key] = True
@@ -268,6 +295,19 @@ class Mesh:
             time_steps=self.time_steps,
             metadata=self.metadata,
         )
+
+    def __iter__(self) -> Generator[Cell, None, None]:
+        """
+        Iterate over the cells of the mesh.
+
+        Yields
+        ------
+        maillages.Cell
+            Cell objects from the mesh.
+
+        """
+        for i in range(self.n_cells):
+            yield cast(Cell, self[i])
 
     def linearize(self) -> Mesh:
         """
